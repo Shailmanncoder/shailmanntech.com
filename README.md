@@ -48,7 +48,28 @@ Adding a product to `products` in `lib/content.ts` automatically creates its
 link. Give it a visual in `components/sections/Products.tsx` (`visualFor`), which
 maps each slug to its own mockup so no two products look alike.
 
-> The NexusMate description is intentionally a placeholder — it is marked with a
+### Product screenshots
+
+Each product shows a hand-built abstract mockup by default. To show a real
+screenshot instead, capture one and point the product's `screenshot` field at it:
+
+```bash
+npm run capture -- nexusmeet https://nexusmeet.live
+```
+
+That writes `public/products/nexusmeet.png` at 2880x1980 (16:11, matching the
+showcase frame). Then in `lib/content.ts`:
+
+```ts
+screenshot: { src: "/products/nexusmeet.png", alt: "The NexusMeet dashboard" },
+```
+
+The showcase and the product route both pick it up automatically and render it
+inside the same browser chrome the mockups use. Remove the field to fall back to
+the mockup. Any image works — the capture script is a convenience, not a
+requirement, so a hand-supplied PNG dropped in `public/products/` is fine.
+
+> The NexusMeet description is intentionally a placeholder — it is marked with a
 > `NOTE(content)` comment in `lib/content.ts`.
 
 ## Contact form

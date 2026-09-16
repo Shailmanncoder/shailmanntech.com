@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
@@ -60,10 +61,47 @@ function Sheen() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  01 — NexusMate : application shell                                 */
+/*  Real product screenshot                                            */
 /* ------------------------------------------------------------------ */
 
-export function NexusMateVisual({ url }: { url: string }) {
+/**
+ * Shows an actual screenshot of the product inside the same browser chrome the
+ * mockups use, so a card with a real capture and one without still read as the
+ * same family. Used whenever a product declares a `screenshot`.
+ */
+export function ProductScreenshot({
+  url,
+  src,
+  alt,
+  priority = false,
+}: {
+  url: string;
+  src: string;
+  alt: string;
+  priority?: boolean;
+}) {
+  return (
+    <BrowserFrame url={url} className="relative">
+      <Sheen />
+      <div className="relative aspect-16/11 w-full overflow-hidden">
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="(min-width: 1024px) 46vw, (min-width: 640px) 88vw, 92vw"
+          className="object-cover object-top transition-transform duration-700 ease-out group-hover/product:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover/product:scale-100"
+          priority={priority}
+        />
+      </div>
+    </BrowserFrame>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  01 — NexusMeet : application shell                                 */
+/* ------------------------------------------------------------------ */
+
+export function NexusMeetVisual({ url }: { url: string }) {
   const reduced = useReducedMotion();
   const bars = [72, 48, 88, 56];
 

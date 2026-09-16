@@ -1,22 +1,36 @@
-import { products } from "@/lib/content";
+import { products, type Product } from "@/lib/content";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ProductShowcase } from "./ProductShowcase";
 import {
   AICareerOSVisual,
   LearnOnlineVisual,
-  NexusMateVisual,
+  NexusMeetVisual,
+  ProductScreenshot,
 } from "./ProductVisuals";
 
-/** Each product gets its own visual language rather than a shared template. */
-function visualFor(slug: string, display: string) {
-  switch (slug) {
-    case "nexusmate":
-      return <NexusMateVisual url={display} />;
+/**
+ * A real screenshot wins when the product has one; otherwise each product falls
+ * back to its own bespoke mockup rather than a shared template.
+ */
+function visualFor(product: Product) {
+  if (product.screenshot) {
+    return (
+      <ProductScreenshot
+        url={product.display}
+        src={product.screenshot.src}
+        alt={product.screenshot.alt}
+      />
+    );
+  }
+
+  switch (product.slug) {
+    case "nexusmeet":
+      return <NexusMeetVisual url={product.display} />;
     case "learnonline":
       return <LearnOnlineVisual />;
     default:
-      return <AICareerOSVisual url={display} />;
+      return <AICareerOSVisual url={product.display} />;
   }
 }
 
@@ -36,7 +50,7 @@ export function Products() {
             key={product.slug}
             product={product}
             reverse={index % 2 === 1}
-            visual={visualFor(product.slug, product.display)}
+            visual={visualFor(product)}
           />
         ))}
       </div>

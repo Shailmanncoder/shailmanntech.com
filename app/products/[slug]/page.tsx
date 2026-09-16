@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProduct, products } from "@/lib/content";
+import { getProduct, products, type Product } from "@/lib/content";
 import { site } from "@/lib/site";
 import { breadcrumbSchema, jsonLd, productSchema } from "@/lib/structured-data";
 import { PageHero } from "@/components/layout/PageHero";
@@ -15,7 +15,8 @@ import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import {
   AICareerOSVisual,
   LearnOnlineVisual,
-  NexusMateVisual,
+  NexusMeetVisual,
+  ProductScreenshot,
 } from "@/components/sections/ProductVisuals";
 import { CTASection } from "@/components/sections/CTASection";
 
@@ -52,14 +53,25 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-function visualFor(slug: string, display: string) {
-  switch (slug) {
-    case "nexusmate":
-      return <NexusMateVisual url={display} />;
+function visualFor(product: Product) {
+  if (product.screenshot) {
+    return (
+      <ProductScreenshot
+        url={product.display}
+        src={product.screenshot.src}
+        alt={product.screenshot.alt}
+        priority
+      />
+    );
+  }
+
+  switch (product.slug) {
+    case "nexusmeet":
+      return <NexusMeetVisual url={product.display} />;
     case "learnonline":
       return <LearnOnlineVisual />;
     default:
-      return <AICareerOSVisual url={display} />;
+      return <AICareerOSVisual url={product.display} />;
   }
 }
 
@@ -110,9 +122,7 @@ export default async function ProductPage({ params }: Params) {
                   background: `radial-gradient(60% 60% at 50% 40%, ${product.accent.glow}, transparent 70%)`,
                 }}
               />
-              <TiltCard max={4}>
-                {visualFor(product.slug, product.display)}
-              </TiltCard>
+              <TiltCard max={4}>{visualFor(product)}</TiltCard>
             </div>
           </Reveal>
 

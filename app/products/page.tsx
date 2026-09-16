@@ -18,12 +18,12 @@ import { CTASection } from "@/components/sections/CTASection";
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "NexusMate, LearnOnline and AI Career OS — digital products designed, engineered and shipped by Shailmann Tech.",
+    "NexusMeet, LearnOnline and AI Career OS — digital products designed, engineered and shipped by Shailmann Tech.",
   alternates: { canonical: "/products" },
   openGraph: {
     title: `Products — ${site.name}`,
     description:
-      "NexusMate, LearnOnline and AI Career OS — products built by Shailmann Tech.",
+      "NexusMeet, LearnOnline and AI Career OS — products built by Shailmann Tech.",
     url: `${site.url}/products`,
   },
 };

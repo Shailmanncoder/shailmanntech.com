@@ -28,6 +28,12 @@ export type Product = {
   url: string;
   /** Domain shown in the browser-chrome mockup. */
   display: string;
+  /**
+   * Real screenshot of the product, shown inside browser chrome instead of the
+   * abstract mockup. Drop a file in public/products/ and point at it here —
+   * `npm run capture -- <slug> <url>` grabs one at the right aspect ratio.
+   */
+  screenshot?: { src: string; alt: string };
   cta: string;
   tech: string[];
   highlights: { title: string; body: string }[];
@@ -37,18 +43,18 @@ export type Product = {
 
 export const products: Product[] = [
   {
-    slug: "nexusmate",
+    slug: "nexusmeet",
     index: "01",
-    name: "NexusMate",
+    name: "NexusMeet",
     kicker: "Connected productivity",
-    // NOTE(content): placeholder copy — swap for the final NexusMate positioning.
+    // NOTE(content): placeholder copy — swap for the final NexusMeet positioning.
     description:
       "A productivity-focused platform built around connected workflows, keeping the tools, context and people behind a project in one coherent space.",
     longDescription:
-      "NexusMate is a Shailmann Tech product exploring how modern productivity software should feel: fast, uncluttered, and aware of the context you are working in. The platform is built on the same engineering foundations we bring to client work — a typed codebase, server-rendered performance, and infrastructure that scales without ceremony.",
-    url: "https://nexusmate.live",
-    display: "nexusmate.live",
-    cta: "Visit NexusMate",
+      "NexusMeet is a Shailmann Tech product exploring how modern productivity software should feel: fast, uncluttered, and aware of the context you are working in. The platform is built on the same engineering foundations we bring to client work — a typed codebase, server-rendered performance, and infrastructure that scales without ceremony.",
+    url: "https://nexusmeet.live",
+    display: "nexusmeet.live",
+    cta: "Visit NexusMeet",
     tech: ["Next.js", "React", "TypeScript", "Node.js", "Tailwind CSS"],
     highlights: [
       {
