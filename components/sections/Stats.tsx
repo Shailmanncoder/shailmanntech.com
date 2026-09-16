@@ -4,7 +4,7 @@ import { StatCard } from "@/components/ui/StatCard";
 export function Stats() {
   return (
     <section
-      aria-label="Shellman Tech at a glance"
+      aria-label="Shailmann Tech at a glance"
       className="relative pb-4 sm:pb-6"
     >
       <div className="container-page">

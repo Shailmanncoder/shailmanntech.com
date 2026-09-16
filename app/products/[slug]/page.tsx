@@ -171,7 +171,7 @@ export default async function ProductPage({ params }: Params) {
         <SectionHeading
           id="more-products-heading"
           eyebrow="More From Us"
-          title="Other Shellman Tech products."
+          title="Other Shailmann Tech products."
         />
         <StaggerGroup
           as="ul"

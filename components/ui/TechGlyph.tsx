@@ -3,7 +3,7 @@ import type { TechKey } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 /**
- * An original, house-designed glyph set for the technologies Shellman Tech
+ * An original, house-designed glyph set for the technologies Shailmann Tech
  * works with. Drawn on a shared 24x24 grid with lucide-matching stroke weights
  * so icons across the site read as one family — and shipped inline so the tech
  * sections cost no extra dependency or network request.

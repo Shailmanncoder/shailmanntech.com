@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { OgCard, ogContentType, ogSize } from "@/components/og/OgCard";
 import { getProduct, products } from "@/lib/content";
 
-export const alt = "Shellman Tech product";
+export const alt = "Shailmann Tech product";
 export const size = ogSize;
 export const contentType = ogContentType;
 
@@ -21,7 +21,7 @@ export default async function ProductOgImage({
   return new ImageResponse(
     <OgCard
       eyebrow={product ? product.kicker : "Product"}
-      title={product ? product.name : "Shellman Tech"}
+      title={product ? product.name : "Shailmann Tech"}
       description={product?.description}
     />,
     size,

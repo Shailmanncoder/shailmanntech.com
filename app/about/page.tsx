@@ -19,7 +19,7 @@ import { CTASection } from "@/components/sections/CTASection";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Shellman Tech is a technology studio building modern digital products and engineering solutions across full-stack development, cloud infrastructure and DevOps.",
+    "Shailmann Tech is a technology studio building modern digital products and engineering solutions across full-stack development, cloud infrastructure and DevOps.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: `About — ${site.name}`,
@@ -53,7 +53,7 @@ export default function AboutPage() {
             <span className="block text-gradient">We build systems.</span>
           </>
         }
-        description="Shellman Tech is a technology studio focused on building modern digital products and engineering solutions. From polished user interfaces to production infrastructure, we work across the technology stack to turn ideas into reliable digital experiences."
+        description="Shailmann Tech is a technology studio focused on building modern digital products and engineering solutions. From polished user interfaces to production infrastructure, we work across the technology stack to turn ideas into reliable digital experiences."
       />
 
       <Section divider aria-labelledby="approach-heading">

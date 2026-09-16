@@ -1,5 +1,5 @@
 {
-  "name": "shellman-tech",
+  "name": "shailmann-tech",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -27,5 +27,5 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "Shellman Tech \u2014 premium portfolio site for a modern technology studio."
+  "description": "Shailmann Tech \u2014 premium portfolio site for a modern technology studio."
 }

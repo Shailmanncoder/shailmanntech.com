@@ -1,14 +1,13 @@
 export const site = {
-  name: "Shellman Tech",
-  shortName: "Shellman",
-  domain: "ShellmanTech.com",
-  url: "https://ShellmanTech.com",
-  email: "support@ShellmanTech.com",
+  name: "Shailmann Tech",
+  shortName: "Shailmann",
+  domain: "ShailmannTech.com",
+  url: "https://shailmanntech.com",
+  email: "support@ShailmannTech.com",
   tagline: "Building Modern Digital Products",
   description:
-    "Shellman Tech builds modern digital products and provides full-stack development, React, Next.js, DevOps, AWS, Docker, Linux, Git, and cloud engineering services.",
+    "Shailmann Tech builds modern digital products and provides full-stack development, React, Next.js, DevOps, AWS, Docker, Linux, Git, and cloud engineering services.",
   blurb: "Building modern technology for the web and beyond.",
-  twitter: "@shellmantech",
 } as const;
 
 export const mailto = `mailto:${site.email}`;

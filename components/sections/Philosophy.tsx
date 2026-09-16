@@ -20,7 +20,7 @@ export function Philosophy() {
                 aria-hidden="true"
                 className="h-px w-8 bg-linear-to-r from-brand-cyan to-brand-violet"
               />
-              Why Shellman Tech
+              Why Shailmann Tech
             </p>
           </Reveal>
 

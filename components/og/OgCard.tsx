@@ -52,7 +52,7 @@ export function OgCard({
         <div
           style={{ display: "flex", fontSize: 28, letterSpacing: "-0.02em" }}
         >
-          <span style={{ fontWeight: 700 }}>Shellman</span>
+          <span style={{ fontWeight: 700 }}>Shailmann</span>
           <span style={{ color: "rgba(255,255,255,0.55)", marginLeft: 8 }}>
             Tech
           </span>

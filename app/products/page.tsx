@@ -18,12 +18,12 @@ import { CTASection } from "@/components/sections/CTASection";
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "NexusMate, LearnOnline and AI Career OS — digital products designed, engineered and shipped by Shellman Tech.",
+    "NexusMate, LearnOnline and AI Career OS — digital products designed, engineered and shipped by Shailmann Tech.",
   alternates: { canonical: "/products" },
   openGraph: {
     title: `Products — ${site.name}`,
     description:
-      "NexusMate, LearnOnline and AI Career OS — products built by Shellman Tech.",
+      "NexusMate, LearnOnline and AI Career OS — products built by Shailmann Tech.",
     url: `${site.url}/products`,
   },
 };
@@ -47,7 +47,7 @@ export default function ProductsPage() {
       <PageHero
         eyebrow="Our Products"
         title="Ideas transformed into products."
-        description="Shellman Tech builds products focused on productivity, education, AI, and modern digital experiences — each one designed, engineered and shipped end to end."
+        description="Shailmann Tech builds products focused on productivity, education, AI, and modern digital experiences — each one designed, engineered and shipped end to end."
       />
 
       <Section divider aria-labelledby="product-index">

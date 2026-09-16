@@ -27,7 +27,7 @@ export function Products() {
         id="products-heading"
         eyebrow="Our Products"
         title="Ideas transformed into products."
-        description="Shellman Tech builds products focused on productivity, education, AI, and modern digital experiences — each one designed, engineered and shipped end to end by the same team."
+        description="Shailmann Tech builds products focused on productivity, education, AI, and modern digital experiences — each one designed, engineered and shipped end to end by the same team."
       />
 
       <div className="mt-16 flex flex-col gap-24 sm:mt-20 lg:mt-24 lg:gap-32 xl:gap-40">

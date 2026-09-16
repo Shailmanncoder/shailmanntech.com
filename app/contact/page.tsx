@@ -12,7 +12,7 @@ import { UnderlineLink } from "@/components/ui/UnderlineLink";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Start a project with Shellman Tech. Tell us what you're building and we'll map the engineering it needs.",
+    "Start a project with Shailmann Tech. Tell us what you're building and we'll map the engineering it needs.",
   alternates: { canonical: "/contact" },
   openGraph: {
     title: `Contact — ${site.name}`,
@@ -66,7 +66,7 @@ export default function ContactPage() {
             </span>
           </>
         }
-        description="Share a little about the project — the stage it's at, what it needs to do, and where you'd like help. We'll come back with how Shellman Tech would approach it."
+        description="Share a little about the project — the stage it's at, what it needs to do, and where you'd like help. We'll come back with how Shailmann Tech would approach it."
       />
 
       <Section

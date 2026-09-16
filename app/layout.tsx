@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   generator: "Next.js",
   category: "technology",
   keywords: [
-    "Shellman Tech",
+    "Shailmann Tech",
     "software engineering",
     "full-stack development",
     "React development",
@@ -66,7 +66,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description: site.description,
-    creator: site.twitter,
   },
   robots: {
     index: true,

@@ -98,8 +98,8 @@ export function Footer() {
         aria-hidden="true"
         className="pointer-events-none relative -mb-4 flex justify-center overflow-hidden select-none sm:-mb-8 lg:-mb-12"
       >
-        <span className="bg-linear-to-b from-white/[0.055] to-transparent bg-clip-text text-[14vw] leading-none font-semibold tracking-[-0.04em] whitespace-nowrap text-transparent">
-          Shellman Tech
+        <span className="bg-linear-to-b from-white/[0.055] to-transparent bg-clip-text text-[13vw] leading-none font-semibold tracking-[-0.04em] whitespace-nowrap text-transparent">
+          Shailmann Tech
         </span>
       </div>
     </footer>

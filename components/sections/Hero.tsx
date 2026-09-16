@@ -118,7 +118,7 @@ export function Hero() {
             transition={{ duration: 0.8, delay: 0.55, ease: easeBrand }}
             className="mt-7 max-w-2xl text-base leading-relaxed text-white/60 sm:mt-8 sm:text-lg"
           >
-            Shellman Tech builds powerful digital products and provides modern
+            Shailmann Tech builds powerful digital products and provides modern
             engineering solutions across full-stack development, cloud
             infrastructure, DevOps, and emerging technologies.
           </motion.p>

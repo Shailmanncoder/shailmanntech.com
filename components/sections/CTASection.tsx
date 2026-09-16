@@ -40,7 +40,7 @@ export function CTASection() {
           <Reveal delay={0.12}>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
               Tell us what you&rsquo;re building and let&rsquo;s explore how
-              Shellman Tech can help bring it to life.
+              Shailmann Tech can help bring it to life.
             </p>
           </Reveal>
 

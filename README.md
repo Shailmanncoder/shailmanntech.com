@@ -1,9 +1,9 @@
-# Shellman Tech
+# Shailmann Tech
 
-The marketing and portfolio site for **Shellman Tech** — a technology studio building
+The marketing and portfolio site for **Shailmann Tech** — a technology studio building
 modern digital products and providing full-stack, cloud and DevOps engineering.
 
-Live domain: <https://ShellmanTech.com> · Support: <support@ShellmanTech.com>
+Live domain: <https://ShailmannTech.com> · Support: <support@ShailmannTech.com>
 
 ## Stack
 

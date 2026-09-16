@@ -30,7 +30,7 @@ export function About() {
 
           <Reveal delay={0.12}>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-              Shellman Tech is a technology studio focused on building modern
+              Shailmann Tech is a technology studio focused on building modern
               digital products and engineering solutions. From polished user
               interfaces to production infrastructure, we work across the
               technology stack to turn ideas into reliable digital experiences.

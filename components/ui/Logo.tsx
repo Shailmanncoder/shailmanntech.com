@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 import { site } from "@/lib/site";
 
 /**
- * The Shellman Tech mark: a terminal prompt set in the brand gradient — a nod
- * to the "shell" in Shellman and to the engineering work underneath the brand.
+ * The Shailmann Tech mark: a terminal prompt set in the brand gradient — a nod
+ * to the "shell" in Shailmann and to the engineering work underneath the brand.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -15,13 +15,13 @@ export function LogoMark({ className }: { className?: string }) {
       className={cn("size-8 shrink-0", className)}
     >
       <defs>
-        <linearGradient id="shellman-mark" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="shailmann-mark" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#22d3ee" />
           <stop offset="52%" stopColor="#4c7dff" />
           <stop offset="100%" stopColor="#8b5cf6" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill="url(#shellman-mark)" />
+      <rect width="32" height="32" rx="9" fill="url(#shailmann-mark)" />
       <rect
         x="0.6"
         y="0.6"
@@ -69,7 +69,7 @@ export function Logo({
     >
       <LogoMark className="size-8 transition-transform duration-500 ease-out group-hover/logo:scale-105 motion-reduce:transition-none motion-reduce:group-hover/logo:scale-100" />
       <span className="text-[0.975rem] tracking-[-0.015em] whitespace-nowrap">
-        <span className="font-semibold text-white">Shellman</span>{" "}
+        <span className="font-semibold text-white">Shailmann</span>{" "}
         <span className="font-medium text-white/55 transition-colors duration-300 group-hover/logo:text-white/80">
           Tech
         </span>

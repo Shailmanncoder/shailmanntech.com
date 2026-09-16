@@ -8,7 +8,7 @@ export const organizationSchema = {
   "@type": "Organization",
   "@id": `${site.url}/#organization`,
   name: site.name,
-  alternateName: "ShellmanTech",
+  alternateName: "ShailmannTech",
   url: site.url,
   logo,
   image: logo,

@@ -45,7 +45,7 @@ export const products: Product[] = [
     description:
       "A productivity-focused platform built around connected workflows, keeping the tools, context and people behind a project in one coherent space.",
     longDescription:
-      "NexusMate is a Shellman Tech product exploring how modern productivity software should feel: fast, uncluttered, and aware of the context you are working in. The platform is built on the same engineering foundations we bring to client work — a typed codebase, server-rendered performance, and infrastructure that scales without ceremony.",
+      "NexusMate is a Shailmann Tech product exploring how modern productivity software should feel: fast, uncluttered, and aware of the context you are working in. The platform is built on the same engineering foundations we bring to client work — a typed codebase, server-rendered performance, and infrastructure that scales without ceremony.",
     url: "https://nexusmate.live",
     display: "nexusmate.live",
     cta: "Visit NexusMate",

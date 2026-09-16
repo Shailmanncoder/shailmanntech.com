@@ -17,7 +17,7 @@ import { CTASection } from "@/components/sections/CTASection";
 export const metadata: Metadata = {
   title: "Engineering Services",
   description:
-    "Full-stack development, React and Next.js engineering, DevOps, AWS, Docker, Linux, Git and cloud infrastructure services from Shellman Tech.",
+    "Full-stack development, React and Next.js engineering, DevOps, AWS, Docker, Linux, Git and cloud infrastructure services from Shailmann Tech.",
   alternates: { canonical: "/services" },
   openGraph: {
     title: `Engineering Services — ${site.name}`,
@@ -46,7 +46,7 @@ export default function ServicesPage() {
       <PageHero
         eyebrow="What We Do"
         title="From infrastructure to interface."
-        description="Shellman Tech works across the whole stack — the systems that run your product and the surface people actually touch. Every engagement is built on the same foundations: typed code, automated delivery, and infrastructure you can reason about."
+        description="Shailmann Tech works across the whole stack — the systems that run your product and the surface people actually touch. Every engagement is built on the same foundations: typed code, automated delivery, and infrastructure you can reason about."
       >
         <div className="mt-9 flex flex-wrap gap-3">
           <ActionButton href="/contact" size="lg" arrow="right">
