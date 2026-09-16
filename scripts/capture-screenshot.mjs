@@ -37,6 +37,32 @@ if (!chrome) {
   process.exit(1);
 }
 
+// Pre-flight: Chrome screenshots its own "This site can't be reached" page and
+// exits 0, so without this the script happily reports success and writes an
+// error page into public/. Fail here instead.
+process.stdout.write(`Checking ${url} is reachable... `);
+let response;
+try {
+  response = await fetch(url, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(20_000),
+    headers: { "user-agent": "shailmanntech-capture" },
+  });
+} catch (error) {
+  console.log("no");
+  console.error(`\n${url} is not responding (${error.cause?.code ?? error.name}).`);
+  console.error("Nothing was captured. Bring the site up, or drop a PNG into");
+  console.error("public/products/ by hand and point lib/content.ts at it.");
+  process.exit(1);
+}
+
+if (!response.ok) {
+  console.log("no");
+  console.error(`\n${url} returned HTTP ${response.status}. Nothing was captured.`);
+  process.exit(1);
+}
+console.log(`yes (HTTP ${response.status})`);
+
 const outDir = resolve("public/products");
 mkdirSync(outDir, { recursive: true });
 const out = resolve(outDir, `${slug}.png`);
@@ -69,6 +95,14 @@ if (!existsSync(out)) {
 }
 
 const kb = Math.round(statSync(out).size / 1024);
+
+// A real page is rarely this small at 2880x1980; an error or blank page is.
+if (kb < 40) {
+  console.error(`\nCapture is only ${kb}KB — that usually means a blank or`);
+  console.error("error page. Check public/products/${slug}.png before using it.");
+  process.exit(1);
+}
+
 console.log(`Done: ${kb}KB at ${WIDTH * 2}x${HEIGHT * 2}`);
 console.log(`Now set screenshot in lib/content.ts:`);
 console.log(`  screenshot: { src: "/products/${slug}.png", alt: "..." },`);
