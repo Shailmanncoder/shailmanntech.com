@@ -53,21 +53,20 @@ async function deliverViaWebhook(
 }
 
 /**
- * Shows the visitor's name in the inbox ("Ada via Shailmann Tech") while the
- * address stays on our verified domain — we can't send as their address.
+ * Sends from the address on our verified domain under a custom display name.
+ * The visitor's name can appear in the label ("Ada via Shailmann Tech"), but
+ * we can't send as their own address.
  */
-function senderFor(payload: ContactPayload) {
+function sender(label: string) {
   const configured =
     process.env.CONTACT_FROM_EMAIL ?? `${site.name} <onboarding@resend.dev>`;
   const address = configured.match(/<([^>]+)>/)?.[1] ?? configured.trim();
-  const visitor = payload.name.replace(/["<>\\\r\n]/g, "").trim();
-  const label = visitor ? `${visitor} via ${site.name}` : site.name;
-  return `"${label}" <${address}>`;
+  return `"${label.replace(/["<>\\\r\n]/g, "").trim()}" <${address}>`;
 }
 
-async function deliverViaResend(
+async function sendViaResend(
   apiKey: string,
-  payload: ContactPayload,
+  email: Record<string, unknown>,
 ): Promise<DeliveryResult> {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -75,13 +74,7 @@ async function deliverViaResend(
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      from: senderFor(payload),
-      to: [process.env.CONTACT_TO_EMAIL ?? site.email],
-      reply_to: payload.email,
-      subject: `Project request — ${payload.service}`,
-      text: renderPlainText(payload),
-    }),
+    body: JSON.stringify(email),
   });
 
   if (!response.ok) {
@@ -91,6 +84,59 @@ async function deliverViaResend(
     };
   }
   return { status: "sent" };
+}
+
+function renderAutoReply(payload: ContactPayload) {
+  return [
+    `Hi ${payload.name},`,
+    "",
+    `Thanks for getting in touch with ${site.name}. We've received your project request and will reply within 1–2 business days.`,
+    "",
+    "Here's a copy of what you sent:",
+    "",
+    `Service: ${payload.service}`,
+    `Budget:  ${payload.budget || "—"}`,
+    "",
+    payload.message,
+    "",
+    "If you have anything to add, just reply to this email.",
+    "",
+    `— ${site.name}`,
+    site.url,
+  ].join("\n");
+}
+
+async function deliverViaResend(
+  apiKey: string,
+  payload: ContactPayload,
+): Promise<DeliveryResult> {
+  const result = await sendViaResend(apiKey, {
+    from: sender(`${payload.name} via ${site.name}`),
+    to: [process.env.CONTACT_TO_EMAIL ?? site.email],
+    reply_to: payload.email,
+    subject: `Project request — ${payload.service}`,
+    text: renderPlainText(payload),
+  });
+
+  if (result.status !== "sent") return result;
+
+  // The request is already with us, so a failed confirmation must not turn
+  // the visitor's submission into an error.
+  const confirmation = await sendViaResend(apiKey, {
+    from: sender(site.name),
+    to: [payload.email],
+    reply_to: process.env.CONTACT_TO_EMAIL ?? site.email,
+    subject: `We've received your request — ${site.name}`,
+    text: renderAutoReply(payload),
+  }).catch((error: unknown) => ({
+    status: "failed" as const,
+    message: error instanceof Error ? error.message : String(error),
+  }));
+
+  if (confirmation.status === "failed") {
+    console.error("Contact auto-reply failed:", confirmation.message);
+  }
+  return result;
 }
 
 export async function deliverContactRequest(

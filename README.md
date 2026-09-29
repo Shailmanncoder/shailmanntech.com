@@ -85,7 +85,7 @@ cp .env.example .env.local
 | Variable              | Effect                                             |
 | --------------------- | -------------------------------------------------- |
 | `CONTACT_WEBHOOK_URL` | POSTs the submission as JSON to any endpoint        |
-| `RESEND_API_KEY`      | Sends the submission as email through Resend        |
+| `RESEND_API_KEY`      | Sends the submission as email through Resend, plus a confirmation to the visitor |
 | `CONTACT_TO_EMAIL`    | Recipient (defaults to the support address)         |
 | `CONTACT_FROM_EMAIL`  | Sender used with Resend                             |
 
