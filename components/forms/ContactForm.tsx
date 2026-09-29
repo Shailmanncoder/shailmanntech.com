@@ -25,6 +25,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { UnderlineLink } from "@/components/ui/UnderlineLink";
 import { easeBrand } from "@/components/ui/Reveal";
 import { useReducedMotion } from "@/lib/hooks";
+import { Turnstile, turnstileSiteKey } from "./Turnstile";
 
 type Status =
   | { kind: "idle" }
@@ -56,6 +57,8 @@ export function ContactForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const statusRef = useRef<HTMLDivElement>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   const update =
     (field: keyof ContactPayload) =>
@@ -89,14 +92,25 @@ export function ContactForm() {
       return;
     }
 
+    if (turnstileSiteKey && !turnstileToken) {
+      setStatus({
+        kind: "error",
+        message:
+          "We're still running a quick spam check. Give it a moment and send again.",
+      });
+      return;
+    }
+
     setStatus({ kind: "submitting" });
 
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, turnstileToken }),
       });
+      // Each token is single-use, so fetch a fresh one for any next attempt.
+      setTurnstileReset((n) => n + 1);
 
       const data = (await response.json()) as ContactResponse;
 
@@ -340,6 +354,14 @@ export function ContactForm() {
           <Chevron />
         </div>
       </Field>
+
+      {turnstileSiteKey ? (
+        <Turnstile
+          siteKey={turnstileSiteKey}
+          onToken={setTurnstileToken}
+          resetKey={turnstileReset}
+        />
+      ) : null}
 
       <div ref={statusRef} aria-live="polite">
         <AnimatePresence mode="wait">

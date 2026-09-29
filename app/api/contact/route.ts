@@ -6,6 +6,7 @@ import {
 } from "@/lib/contact";
 import { deliverContactRequest } from "@/lib/contact-delivery";
 import { site } from "@/lib/site";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,21 @@ export async function POST(request: Request) {
     return NextResponse.json<ContactResponse>(
       { ok: false, code: "invalid", errors },
       { status: 422 },
+    );
+  }
+
+  const token =
+    typeof raw.turnstileToken === "string" ? raw.turnstileToken : "";
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (!(await verifyTurnstile(token, ip ?? null))) {
+    return NextResponse.json<ContactResponse>(
+      {
+        ok: false,
+        code: "failed",
+        message:
+          "We couldn't confirm the request came from a person. Please try again.",
+      },
+      { status: 403 },
     );
   }
 
