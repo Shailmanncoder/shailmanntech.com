@@ -77,6 +77,8 @@ export async function POST(request: Request) {
     );
   }
 
+  console.error("Contact delivery failed:", result.message);
+
   return NextResponse.json<ContactResponse>(
     {
       ok: false,

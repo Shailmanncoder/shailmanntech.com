@@ -52,6 +52,19 @@ async function deliverViaWebhook(
   return { status: "sent" };
 }
 
+/**
+ * Shows the visitor's name in the inbox ("Ada via Shailmann Tech") while the
+ * address stays on our verified domain — we can't send as their address.
+ */
+function senderFor(payload: ContactPayload) {
+  const configured =
+    process.env.CONTACT_FROM_EMAIL ?? `${site.name} <onboarding@resend.dev>`;
+  const address = configured.match(/<([^>]+)>/)?.[1] ?? configured.trim();
+  const visitor = payload.name.replace(/["<>\\\r\n]/g, "").trim();
+  const label = visitor ? `${visitor} via ${site.name}` : site.name;
+  return `"${label}" <${address}>`;
+}
+
 async function deliverViaResend(
   apiKey: string,
   payload: ContactPayload,
@@ -63,9 +76,7 @@ async function deliverViaResend(
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      from:
-        process.env.CONTACT_FROM_EMAIL ??
-        `${site.name} <onboarding@resend.dev>`,
+      from: senderFor(payload),
       to: [process.env.CONTACT_TO_EMAIL ?? site.email],
       reply_to: payload.email,
       subject: `Project request — ${payload.service}`,
@@ -76,7 +87,7 @@ async function deliverViaResend(
   if (!response.ok) {
     return {
       status: "failed",
-      message: `Email provider responded with ${response.status}.`,
+      message: `Email provider responded with ${response.status}: ${await response.text()}`,
     };
   }
   return { status: "sent" };
