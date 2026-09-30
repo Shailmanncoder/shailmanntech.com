@@ -86,7 +86,7 @@ describe.skipIf(!ready)("mailbox sync", async () => {
         email(`"Person ${i}" <person${i}@example.com>`, `Question ${i}`),
       );
     }
-    for (const raw of messages) await client.append("INBOX", raw);
+    for (const raw of messages) await client.append("INBOX", raw, undefined, new Date("2020-01-01T12:00:00Z"));
     await client.logout();
   });
 

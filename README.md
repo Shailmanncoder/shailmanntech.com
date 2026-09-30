@@ -76,8 +76,8 @@ requirement, so a hand-supplied PNG dropped in `public/products/` is fine.
 
 `/admin` is a private, single-user dashboard for the support@ inbox:
 
-- **Inbox** — the mailbox is synced read-only over IMAP into Postgres (the last
-  12 months on first sync, then new mail). Search, filters (awaiting reply,
+- **Inbox** — the mailbox is synced read-only over IMAP into Postgres (all available
+  history on first sync, then new mail). Search, filters (awaiting reply,
   form requests, starred, replied, archived), star, archive and CSV export.
 - **Replies** — sent through Resend from the support address, threaded with the
   original. Replies are recorded in the admin, not in the mailbox's Sent folder.

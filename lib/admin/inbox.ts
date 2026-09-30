@@ -87,12 +87,12 @@ function toSummary(row: Row): MessageSummary {
   };
 }
 
-export async function listMessages(filter: InboxFilter, search: string) {
+export async function listMessages(filter: InboxFilter, search: string, offset = 0) {
   const sql = await db();
   const term = search.trim() ? `%${search.trim()}%` : null;
 
   const where = {
-    all: sql`not automated and not archived`,
+    all: sql`true`,
     awaiting: sql`not automated and not archived and status <> 'replied'`,
     form: sql`not automated and not archived and source = 'form'`,
     starred: sql`starred`,
@@ -113,8 +113,8 @@ export async function listMessages(filter: InboxFilter, search: string) {
                 or contact_name ilike ${term} or contact_email ilike ${term})`
         : sql``
     }
-    order by received_at desc
-    limit 200`;
+    order by received_at desc, id desc
+    limit 201 offset ${offset}`;
   return rows.map(toSummary);
 }
 

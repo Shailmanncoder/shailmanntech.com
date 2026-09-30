@@ -16,7 +16,6 @@ import { db } from "./db";
 
 const MAILBOX = "INBOX";
 const BATCH_SIZE = 25;
-const FIRST_SYNC_DAYS = 365;
 const MAX_BODY = 100_000;
 const CLASSIFY_BATCH = 150;
 
@@ -147,10 +146,8 @@ export async function syncMailbox(): Promise<SyncResult> {
       if (state && state.uidvalidity === uidValidity) {
         lastUid = Number(state.last_uid);
       } else {
-        // First sync (or the server renumbered the mailbox): start a year back.
-        const since = new Date(Date.now() - FIRST_SYNC_DAYS * 86_400_000);
-        const recent = (await client.search({ since }, { uid: true })) || [];
-        lastUid = recent.length ? Math.min(...recent) - 1 : mailbox.uidNext - 1;
+        // Import all messages still present in the mailbox, regardless of age.
+        lastUid = 0;
       }
 
       const pending = (

@@ -71,7 +71,7 @@ const FOLDERS: {
   icon: typeof Inbox;
   count?: keyof InboxStats["counts"];
 }[] = [
-  { key: "all", label: "Inbox", icon: Inbox, count: "unread" },
+  { key: "all", label: "All emails", icon: Inbox, count: "unread" },
   { key: "awaiting", label: "Awaiting reply", icon: Clock, count: "awaiting" },
   { key: "form", label: "Form requests", icon: FileText, count: "form" },
   { key: "starred", label: "Starred", icon: Star, count: "starred" },
@@ -119,9 +119,12 @@ export function AdminApp({ setup }: { setup: Setup }) {
 
 function AdminShell({ setup }: { setup: Setup }) {
   const toast = useToast();
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>("all");
   const [stats, setStats] = useState<InboxStats | null>(null);
   const [messages, setMessages] = useState<MessageSummary[] | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const listGeneration = useRef(0);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [sync, setSync] = useState({ running: false, imported: 0, error: "" });
@@ -151,12 +154,15 @@ function AdminShell({ setup }: { setup: Setup }) {
 
   const loadMessages = useCallback(async () => {
     if (!setup.database || isPage) return;
+    const generation = ++listGeneration.current;
     const params = new URLSearchParams({ filter: folder, search });
     try {
-      const data = await adminFetch<{ messages: MessageSummary[] }>(
+      const data = await adminFetch<{ messages: MessageSummary[]; hasMore: boolean }>(
         `/api/admin/messages?${params}`,
       );
+      if (generation !== listGeneration.current) return;
       setMessages(data.messages);
+      setHasMore(data.hasMore);
     } catch (e) {
       toast({
         tone: "error",
@@ -164,6 +170,26 @@ function AdminShell({ setup }: { setup: Setup }) {
       });
     }
   }, [folder, search, setup.database, isPage, toast]);
+
+  async function loadMore() {
+    if (loadingMore || !messages) return;
+    const generation = listGeneration.current;
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams({ filter: folder, search, offset: String(messages.length) });
+      const data = await adminFetch<{ messages: MessageSummary[]; hasMore: boolean }>(`/api/admin/messages?${params}`);
+      if (generation !== listGeneration.current) return;
+      setMessages((current) => {
+        const ids = new Set((current ?? []).map((m) => m.id));
+        return [...(current ?? []), ...data.messages.filter((m) => !ids.has(m.id))];
+      });
+      setHasMore(data.hasMore);
+    } catch {
+      toast({ tone: "error", text: "Couldn't load older emails. Please try again." });
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const refresh = useCallback(() => {
     loadMessages();
@@ -230,11 +256,17 @@ function AdminShell({ setup }: { setup: Setup }) {
   }, [loadMessages, search]);
 
   const openFolder = useCallback((next: View) => {
+    if (next === view) {
+      setSelected(null);
+      return;
+    }
+    listGeneration.current++;
+    setHasMore(false);
     setView(next);
     setSelected(null);
     setMessages(null);
     setSearch("");
-  }, []);
+  }, [view]);
 
   const openMessage = useCallback(
     (id: string) => {
@@ -516,7 +548,7 @@ function AdminShell({ setup }: { setup: Setup }) {
                   </h1>
                   <span className="text-xs text-white/50 tabular-nums">
                     {messages
-                      ? `${messages.length}${messages.length === 200 ? "+" : ""}`
+                      ? `${messages.length}${hasMore ? "+" : ""}`
                       : ""}
                   </span>
                 </div>
@@ -529,14 +561,14 @@ function AdminShell({ setup }: { setup: Setup }) {
                   <input
                     ref={searchRef}
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { listGeneration.current++; setHasMore(false); setSearch(e.target.value); }}
                     placeholder="Search"
                     className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pr-14 pl-9 text-sm text-white placeholder:text-white/50 focus:border-brand-cyan/40 focus:ring-2 focus:ring-brand-cyan/15 focus:outline-none"
                   />
                   {search ? (
                     <button
                       type="button"
-                      onClick={() => setSearch("")}
+                      onClick={() => { listGeneration.current++; setHasMore(false); setSearch(""); }}
                       aria-label="Clear search"
                       className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-white/50 hover:text-white"
                     >
@@ -632,6 +664,12 @@ function AdminShell({ setup }: { setup: Setup }) {
                     </div>
                   ))
                 )}
+                {hasMore && messages ? (
+                  <button type="button" onClick={loadMore} disabled={loadingMore}
+                    className="mx-4 my-4 rounded-lg border border-white/15 px-4 py-2 text-sm text-white disabled:opacity-50">
+                    {loadingMore ? "Loading…" : "Load older emails"}
+                  </button>
+                ) : null}
               </div>
             </section>
 
@@ -677,7 +715,7 @@ function AdminShell({ setup }: { setup: Setup }) {
         {(
           [
             ["overview", "Overview", LayoutDashboard],
-            ["all", "Inbox", Inbox],
+            ["all", "All emails", Inbox],
             ["rules", "Project rules", SlidersHorizontal],
             ["system", "System", Activity],
           ] as const

@@ -20,5 +20,8 @@ export const GET = adminRoute(async (request: Request) => {
   const requested = params.get("filter") as InboxFilter;
   const filter = FILTERS.includes(requested) ? requested : "all";
   const search = (params.get("search") ?? "").slice(0, 200);
-  return NextResponse.json({ messages: await listMessages(filter, search) });
+  const value = Number(params.get("offset") ?? 0);
+  const offset = Number.isSafeInteger(value) && value >= 0 ? value : 0;
+  const rows = await listMessages(filter, search, offset);
+  return NextResponse.json({ messages: rows.slice(0, 200), hasMore: rows.length > 200 });
 });
