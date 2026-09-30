@@ -7,6 +7,7 @@ import {
 } from "@/lib/contact-delivery";
 import { site } from "@/lib/site";
 import { db } from "./db";
+import type { ReplyAttachment } from "./workspace-validation";
 
 export type FitDecision = "yes" | "no" | "info" | "other" | "spam";
 
@@ -42,6 +43,14 @@ export type MessageDetail = MessageSummary & {
   /** The reply the AI drafted from the fit check, waiting for review. */
   smartDraft: string | null;
   replies: Reply[];
+  mailbox: string;
+  direction: string;
+  attachments: {
+    index: number;
+    filename: string;
+    size: number;
+    contentType: string;
+  }[];
 };
 
 export type InboxFilter =
@@ -87,13 +96,18 @@ function toSummary(row: Row): MessageSummary {
   };
 }
 
-export async function listMessages(filter: InboxFilter, search: string, offset = 0) {
+export async function listMessages(
+  filter: InboxFilter,
+  search: string,
+  offset = 0,
+  mailbox = "",
+) {
   const sql = await db();
   const term = search.trim() ? `%${search.trim()}%` : null;
 
   const where = {
     all: sql`true`,
-    awaiting: sql`not automated and not archived and status <> 'replied'`,
+    awaiting: sql`not automated and not archived and direction = 'incoming' and status <> 'replied'`,
     form: sql`not automated and not archived and source = 'form'`,
     starred: sql`starred`,
     replied: sql`not automated and status = 'replied'`,
@@ -107,6 +121,7 @@ export async function listMessages(filter: InboxFilter, search: string, offset =
            automated, automated_reason, fit
     from admin_messages
     where ${where}
+    ${mailbox ? sql`and mailbox = ${mailbox}` : sql``}
     ${
       term
         ? sql`and (subject ilike ${term} or body ilike ${term}
@@ -128,6 +143,9 @@ export async function getMessage(id: string): Promise<MessageDetail | null> {
       ai_analysis: string | null;
       fit_reason: string | null;
       smart_draft: string | null;
+      mailbox: string;
+      direction: string;
+      attachments: MessageDetail["attachments"];
     })[]
   >`select * from admin_messages where id = ${id}`;
   if (!row) return null;
@@ -139,6 +157,9 @@ export async function getMessage(id: string): Promise<MessageDetail | null> {
   return {
     ...toSummary(row),
     body: row.body,
+    mailbox: row.mailbox,
+    direction: row.direction,
+    attachments: row.attachments,
     fromName: row.from_name,
     fromEmail: row.from_email,
     messageId: row.message_id,
@@ -229,6 +250,7 @@ export type SendReplyResult =
 export async function sendReply(
   message: MessageDetail,
   body: string,
+  attachments: ReplyAttachment[] = [],
 ): Promise<SendReplyResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -237,12 +259,14 @@ export async function sendReply(
 
   const sql = await db();
   const text = body.trim();
-  const key = replyKey(message.id, text);
+  const key = attachments.length
+    ? replyKey(message.id, text + "\n" + JSON.stringify(attachments))
+    : replyKey(message.id, text);
 
   // 1. Record the reply before sending it.
   const [claimed] = await sql<{ id: string }[]>`
-    insert into admin_replies (message_id, body, status, idempotency_key)
-    values (${message.id}, ${text}, 'sending', ${key})
+    insert into admin_replies (message_id, body, status, idempotency_key, attachments)
+    values (${message.id}, ${text}, 'sending', ${key}, ${sql.json(attachments)})
     on conflict (idempotency_key) do nothing
     returning id`;
 
@@ -292,6 +316,7 @@ export async function sendReply(
       subject,
       text: `${text}\n\n${quoteOriginal(message)}`,
       headers: threading,
+      attachments: attachments.length ? attachments : undefined,
     },
     { idempotencyKey: `reply-${key}` },
   );
@@ -364,10 +389,10 @@ export async function getStats(): Promise<InboxStats> {
       count(*) filter (where received_at >= date_trunc('month', now()))::int as this_month,
       count(*) filter (where received_at >= date_trunc('month', now()) - interval '1 month'
                          and received_at < date_trunc('month', now()))::int as last_month,
-      count(*) filter (where not archived and status <> 'replied')::int as awaiting,
+      count(*) filter (where not archived and direction = 'incoming' and status <> 'replied')::int as awaiting,
       count(*) filter (where status = 'replied')::int as replied
     from admin_messages
-    where not automated`;
+    where not automated and direction = 'incoming'`;
 
   const [speed] = await sql<{ hours: number | null }[]>`
     select percentile_cont(0.5) within group (
@@ -390,7 +415,7 @@ export async function getStats(): Promise<InboxStats> {
     ) as months(month)
     left join admin_messages m
       on date_trunc('month', m.received_at) = months.month
-      and not m.automated
+      and not m.automated and m.direction = 'incoming'
     group by months.month
     order by months.month`;
 
@@ -409,7 +434,7 @@ export async function getStats(): Promise<InboxStats> {
   >`
     select
       count(*) filter (where not automated and not archived and status = 'new')::int as unread,
-      count(*) filter (where not automated and not archived and status <> 'replied')::int as awaiting,
+      count(*) filter (where not automated and not archived and direction = 'incoming' and status <> 'replied')::int as awaiting,
       count(*) filter (where not automated and not archived and source = 'form')::int as form,
       count(*) filter (where starred)::int as starred,
       count(*) filter (where automated)::int as automated,
@@ -421,7 +446,7 @@ export async function getStats(): Promise<InboxStats> {
            source, received_at, status, archived, starred,
            automated, automated_reason, fit
     from admin_messages
-    where not automated and not archived and status <> 'replied'
+    where not automated and not archived and direction = 'incoming' and status <> 'replied'
       and received_at >= now() - interval '30 days'
     order by received_at asc
     limit 5`;

@@ -14,7 +14,6 @@ import { db } from "./db";
  * a large inbox runs as several short requests instead of one long one.
  */
 
-const MAILBOX = "INBOX";
 const BATCH_SIZE = 25;
 const MAX_BODY = 100_000;
 const CLASSIFY_BATCH = 150;
@@ -127,11 +126,17 @@ export type SyncResult = {
   automated: number;
 };
 
-export async function syncMailbox(): Promise<SyncResult> {
+export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
   const sql = await db();
   const client = await connect();
 
   try {
+    const available = await client.list();
+    const folder = available.find((f) => f.path === MAILBOX);
+    if (!folder) throw new Error("Mailbox folder not found.");
+    const outgoing =
+      folder.specialUse === "\\Sent" ||
+      /(^|[/.])sent( items| mail)?$/i.test(MAILBOX);
     const lock = await client.getMailboxLock(MAILBOX, { readOnly: true });
     try {
       const mailbox = client.mailbox;
@@ -171,7 +176,20 @@ export async function syncMailbox(): Promise<SyncResult> {
           const parsed = await simpleParser(message.source);
           const from = firstAddress(parsed.from);
           const replyTo = firstAddress(parsed.replyTo);
-          const { source, contactName, contactEmail } = classify(from, replyTo);
+          const recipient = firstAddress(parsed.to);
+          const { source, contactName, contactEmail } = outgoing
+            ? {
+                source: "email",
+                contactName: recipient.name,
+                contactEmail: recipient.email,
+              }
+            : classify(from, replyTo);
+          const attachments = parsed.attachments.map((a, index) => ({
+            index,
+            filename: a.filename || `attachment-${index + 1}`,
+            size: a.size,
+            contentType: a.contentType,
+          }));
           const receivedAt =
             parsed.date ??
             (message.internalDate
@@ -188,15 +206,17 @@ export async function syncMailbox(): Promise<SyncResult> {
             insert into admin_messages (
               uidvalidity, uid, message_id, from_name, from_email,
               contact_name, contact_email, subject, body, source, received_at,
-              automated, automated_reason, classified
+              automated, automated_reason, classified, mailbox, direction, attachments, status
             ) values (
               ${uidValidity}, ${message.uid}, ${parsed.messageId ?? null},
               ${from.name}, ${from.email}, ${contactName}, ${contactEmail},
               ${parsed.subject ?? ""}, ${body}, ${source}, ${receivedAt},
-              ${reason !== null}, ${reason}, true
+              ${reason !== null}, ${reason}, true, ${MAILBOX}, ${outgoing ? "outgoing" : "incoming"}, ${sql.json(attachments)}, ${outgoing ? "replied" : "new"}
             )
-            on conflict (uidvalidity, uid) do nothing
+            on conflict (mailbox, uidvalidity, uid) do nothing
             returning id`;
+          if (!rows.length)
+            await sql`update admin_messages set attachments=${sql.json(attachments)} where mailbox=${MAILBOX} and uidvalidity=${uidValidity} and uid=${message.uid}`;
           imported += rows.length;
           if (rows.length && reason) automated++;
         }
@@ -223,14 +243,14 @@ export async function syncMailbox(): Promise<SyncResult> {
         }[]
       >`
         select id, uid, source, from_email, from_name from admin_messages
-        where not classified and uidvalidity = ${uidValidity}
+        where mailbox = ${MAILBOX} and not classified and uidvalidity = ${uidValidity}
         order by uid limit ${CLASSIFY_BATCH}`;
       // Rows from an older mailbox numbering can't be looked up by UID.
       const orphaned = await sql<
         { id: string; source: string; from_email: string; from_name: string }[]
       >`
         select id, source, from_email, from_name from admin_messages
-        where not classified and uidvalidity <> ${uidValidity}
+        where mailbox = ${MAILBOX} and not classified and uidvalidity <> ${uidValidity}
         limit ${CLASSIFY_BATCH}`;
       for (const row of orphaned) {
         const reason =
@@ -280,13 +300,59 @@ export async function syncMailbox(): Promise<SyncResult> {
         }
       }
       const [{ count: stillUnchecked }] = await sql<{ count: number }[]>`
-        select count(*)::int as count from admin_messages where not classified`;
+        select count(*)::int as count from admin_messages where mailbox = ${MAILBOX} and not classified`;
 
       return {
         imported,
         remaining: pending.length - batch.length + stillUnchecked,
         automated,
       };
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function listMailboxFolders() {
+  const client = await connect();
+  try {
+    return (await client.list())
+      .filter((f) => !f.flags.has("\\Noselect"))
+      .map((f) => ({
+        path: f.path,
+        name: f.name,
+        specialUse: f.specialUse ?? null,
+      }));
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function downloadAttachment(id: string, index: number) {
+  const sql = await db();
+  const [row] = await sql<
+    { mailbox: string; uid: string; uidvalidity: string }[]
+  >`select mailbox,uid,uidvalidity from admin_messages where id=${id}`;
+  if (!row) return null;
+  const client = await connect();
+  try {
+    const lock = await client.getMailboxLock(row.mailbox, { readOnly: true });
+    try {
+      if (
+        !client.mailbox ||
+        String(client.mailbox.uidValidity) !== String(row.uidvalidity)
+      )
+        return null;
+      const message = await client.fetchOne(
+        row.uid,
+        { source: true },
+        { uid: true },
+      );
+      if (!message || !message.source) return null;
+      const parsed = await simpleParser(message.source);
+      return parsed.attachments[index] ?? null;
     } finally {
       lock.release();
     }

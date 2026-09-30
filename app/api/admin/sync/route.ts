@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminRoute } from "@/lib/admin/api";
+import { adminRoute, readJson } from "@/lib/admin/api";
 import { logEvent } from "@/lib/admin/audit";
 import { reportError } from "@/lib/errors";
 import { mailboxConfigured, syncMailbox } from "@/lib/admin/mailbox";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export const POST = adminRoute(async () => {
+export const POST = adminRoute(async (request: Request) => {
   if (!mailboxConfigured()) {
     return NextResponse.json(
       { error: "The mailbox isn't connected yet (IMAP_USER / IMAP_PASSWORD)." },
@@ -16,7 +16,9 @@ export const POST = adminRoute(async () => {
     );
   }
   try {
-    const result = await syncMailbox();
+    const body = await readJson(request);
+    const mailbox = typeof body.mailbox === "string" ? body.mailbox.slice(0, 255) : "INBOX";
+    const result = await syncMailbox(mailbox);
     if (result.imported > 0) {
       await logEvent("mail_synced", {
         details: { imported: result.imported, automated: result.automated },

@@ -15,6 +15,7 @@ export type AuditAction =
   | "reply_sent"
   | "message_updated"
   | "rules_saved"
+  | "lead_saved"
   | "export_downloaded"
   | "mail_synced"
   | "errors_resolved";

@@ -22,6 +22,6 @@ export const GET = adminRoute(async (request: Request) => {
   const search = (params.get("search") ?? "").slice(0, 200);
   const value = Number(params.get("offset") ?? 0);
   const offset = Number.isSafeInteger(value) && value >= 0 ? value : 0;
-  const rows = await listMessages(filter, search, offset);
+  const rows = await listMessages(filter, search, offset, (params.get("mailbox") ?? "").slice(0,255));
   return NextResponse.json({ messages: rows.slice(0, 200), hasMore: rows.length > 200 });
 });

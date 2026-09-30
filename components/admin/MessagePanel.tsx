@@ -20,6 +20,9 @@ import {
   Star,
   Wand2,
 } from "lucide-react";
+import { ClientDetails } from "./WorkspacePanel";
+import { Conversation } from "./Conversation";
+import type { ReplyAttachment } from "@/lib/admin/workspace-validation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -53,9 +56,9 @@ function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null;
   return Boolean(
     el &&
-    (el.tagName === "INPUT" ||
-      el.tagName === "TEXTAREA" ||
-      el.isContentEditable),
+      (el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.isContentEditable),
   );
 }
 
@@ -95,6 +98,8 @@ export function MessagePanel({
     reason: string;
   } | null>(null);
   const [checking, setChecking] = useState(false);
+  const [files, setFiles] = useState<ReplyAttachment[]>([]);
+  const [readingFiles, setReadingFiles] = useState(false);
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -116,7 +121,13 @@ export function MessagePanel({
         // A person's email that hasn't been checked yet: check its fit against
         // the project rules and draft the reply straight away. The result is
         // saved, so this runs once per email.
-        if (aiReady && !m.automated && m.status !== "replied" && !m.fit) {
+        if (
+          aiReady &&
+          m.direction !== "outgoing" &&
+          !m.automated &&
+          m.status !== "replied" &&
+          !m.fit
+        ) {
           setChecking(true);
           try {
             const result = await adminFetch<{
@@ -312,17 +323,54 @@ export function MessagePanel({
     setDrafting(false);
   }
 
+  async function pickFiles(list: FileList | null) {
+    if (!list) return;
+    const chosen = Array.from(list);
+    if (
+      chosen.length > 5 ||
+      chosen.reduce((n, f) => n + f.size, 0) > 2 * 1024 * 1024
+    ) {
+      toast({ tone: "error", text: "Choose up to five files, 2 MB total." });
+      return;
+    }
+    setReadingFiles(true);
+    try {
+      const attachments = await Promise.all(
+        chosen.map(
+          (file) =>
+            new Promise<ReplyAttachment>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onerror = () =>
+                reject(new Error("Couldn't read attachment."));
+              reader.onload = () =>
+                resolve({
+                  filename: file.name,
+                  content: String(reader.result).split(",")[1],
+                });
+              reader.readAsDataURL(file);
+            }),
+        ),
+      );
+      setFiles(attachments);
+    } catch {
+      toast({ tone: "error", text: "Couldn't read the selected files." });
+    } finally {
+      setReadingFiles(false);
+    }
+  }
+
   async function send() {
-    if (!message) return;
+    if (!message || sending || readingFiles) return;
     setConfirming(false);
     setSending(true);
     try {
       const data = await adminFetch<{ message: MessageDetail }>(
         `/api/admin/messages/${id}/reply`,
-        { method: "POST", body: { body: reply } },
+        { method: "POST", body: { body: reply, attachments: files } },
       );
       setMessage(data.message);
       setReply("");
+      setFiles([]);
       setInstruction("");
       toast({
         tone: "ok",
@@ -453,7 +501,8 @@ export function MessagePanel({
             ) : null}
             {message.status === "replied" ? (
               <Badge tone="replied">
-                <Check aria-hidden="true" className="size-3" /> Replied
+                <Check aria-hidden="true" className="size-3" />{" "}
+                {message.direction === "outgoing" ? "Sent" : "Replied"}
               </Badge>
             ) : null}
             {message.archived ? <Badge tone="neutral">Archived</Badge> : null}
@@ -533,6 +582,37 @@ export function MessagePanel({
           )}
         </div>
 
+        <div className="space-y-4">
+          <ClientDetails
+            email={message.contactEmail}
+            name={message.contactName}
+            onTemplate={(body) =>
+              setReply((current) => (current ? current + "\n\n" + body : body))
+            }
+          />
+          <Conversation id={id} />
+          {message.attachments?.length ? (
+            <Card className="p-4">
+              <h2 className="font-semibold">Attachments</h2>
+              <ul className="mt-2 space-y-2">
+                {message.attachments.map((a) => (
+                  <li key={a.index}>
+                    <a
+                      className="text-sm text-cyan-200 underline"
+                      href={`/api/admin/messages/${id}/attachments/${a.index}`}
+                    >
+                      {a.filename} ({Math.ceil(a.size / 1024)} KB)
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-white/60">
+                Files download from the original mailbox. Open only files you
+                trust.
+              </p>
+            </Card>
+          ) : null}
+        </div>
         {message.replies.length ? (
           <div>
             <button
@@ -740,6 +820,30 @@ export function MessagePanel({
             </div>
           ) : null}
 
+          <div className="space-y-2 border-t border-white/10 p-4">
+            <label className="block text-sm">
+              Attach files (up to 5, 2 MB total)
+              <input
+                type="file"
+                multiple
+                disabled={sending || readingFiles}
+                onChange={(e) => pickFiles(e.target.files)}
+                className="mt-2 block w-full text-sm"
+              />
+            </label>
+            {files.length ? (
+              <div className="text-sm text-white/70">
+                {files.map((f) => f.filename).join(", ")}{" "}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setFiles([])}
+                >
+                  Remove attachments
+                </Button>
+              </div>
+            ) : null}
+          </div>
           <div className="relative border-t border-white/[0.06]">
             <textarea
               ref={replyRef}
@@ -786,7 +890,9 @@ export function MessagePanel({
               <Button
                 variant="primary"
                 onClick={() => setConfirming(true)}
-                disabled={!emailReady || sending || !reply.trim()}
+                disabled={
+                  !emailReady || sending || readingFiles || !reply.trim()
+                }
               >
                 {sending ? (
                   <LoaderCircle
@@ -811,6 +917,11 @@ export function MessagePanel({
             It goes to{" "}
             <span className="text-white/85">{message.contactEmail}</span> from
             your support address, with their original email quoted below.
+            {files.length > 0 && (
+              <span className="mt-2 block">
+                Attachments: {files.map((f) => f.filename).join(", ")}
+              </span>
+            )}
           </>
         }
         confirmLabel="Send reply"

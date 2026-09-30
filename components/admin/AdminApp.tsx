@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Users,
   Activity,
   AlertTriangle,
   Archive,
@@ -46,6 +47,7 @@ import { MessagePanel } from "./MessagePanel";
 import { FitBadge } from "./FitBadge";
 import { Overview } from "./Overview";
 import { RulesPanel } from "./RulesPanel";
+import { WorkspacePanel, type Lead } from "./WorkspacePanel";
 import { SystemPanel } from "./SystemPanel";
 import {
   Avatar,
@@ -63,7 +65,7 @@ type Setup = {
   ai: boolean;
   email: boolean;
 };
-type View = "overview" | "rules" | "system" | InboxFilter;
+type View = "overview" | "rules" | "system" | "workspace" | InboxFilter;
 
 const FOLDERS: {
   key: InboxFilter;
@@ -103,9 +105,9 @@ function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null;
   return Boolean(
     el &&
-    (el.tagName === "INPUT" ||
-      el.tagName === "TEXTAREA" ||
-      el.isContentEditable),
+      (el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.isContentEditable),
   );
 }
 
@@ -120,11 +122,42 @@ export function AdminApp({ setup }: { setup: Setup }) {
 function AdminShell({ setup }: { setup: Setup }) {
   const toast = useToast();
   const [view, setView] = useState<View>("all");
+  const [dueFollowUps, setDueFollowUps] = useState(0);
+  useEffect(() => {
+    if (!setup.database) return;
+    let active = true;
+    const refreshDue = () =>
+      adminFetch<{ leads: Lead[] }>("/api/admin/leads")
+        .then(({ leads }) => {
+          if (active)
+            setDueFollowUps(
+              leads.filter(
+                (l) =>
+                  l.followUpAt &&
+                  new Date(l.followUpAt).getTime() <= Date.now(),
+              ).length,
+            );
+        })
+        .catch(() => {});
+    refreshDue();
+    const timer = setInterval(refreshDue, 60000);
+    window.addEventListener("focus", refreshDue);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshDue);
+    };
+  }, [setup.database, view]);
+
   const [stats, setStats] = useState<InboxStats | null>(null);
   const [messages, setMessages] = useState<MessageSummary[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const listGeneration = useRef(0);
+  const [mailbox, setMailbox] = useState("");
+  const [mailboxes, setMailboxes] = useState<{ path: string; name: string }[]>(
+    [],
+  );
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [sync, setSync] = useState({ running: false, imported: 0, error: "" });
@@ -134,7 +167,11 @@ function AdminShell({ setup }: { setup: Setup }) {
   const syncing = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const isPage = view === "overview" || view === "rules" || view === "system";
+  const isPage =
+    view === "overview" ||
+    view === "rules" ||
+    view === "system" ||
+    view === "workspace";
   const folder: InboxFilter = isPage ? "all" : view;
   const missing = (Object.keys(setup) as (keyof Setup)[]).filter(
     (key) => !setup[key],
@@ -155,11 +192,12 @@ function AdminShell({ setup }: { setup: Setup }) {
   const loadMessages = useCallback(async () => {
     if (!setup.database || isPage) return;
     const generation = ++listGeneration.current;
-    const params = new URLSearchParams({ filter: folder, search });
+    const params = new URLSearchParams({ filter: folder, search, mailbox });
     try {
-      const data = await adminFetch<{ messages: MessageSummary[]; hasMore: boolean }>(
-        `/api/admin/messages?${params}`,
-      );
+      const data = await adminFetch<{
+        messages: MessageSummary[];
+        hasMore: boolean;
+      }>(`/api/admin/messages?${params}`);
       if (generation !== listGeneration.current) return;
       setMessages(data.messages);
       setHasMore(data.hasMore);
@@ -169,23 +207,37 @@ function AdminShell({ setup }: { setup: Setup }) {
         text: e instanceof Error ? e.message : "Couldn't load the inbox.",
       });
     }
-  }, [folder, search, setup.database, isPage, toast]);
+  }, [folder, search, mailbox, setup.database, isPage, toast]);
 
   async function loadMore() {
     if (loadingMore || !messages) return;
     const generation = listGeneration.current;
     setLoadingMore(true);
     try {
-      const params = new URLSearchParams({ filter: folder, search, offset: String(messages.length) });
-      const data = await adminFetch<{ messages: MessageSummary[]; hasMore: boolean }>(`/api/admin/messages?${params}`);
+      const params = new URLSearchParams({
+        filter: folder,
+        search,
+        mailbox,
+        offset: String(messages.length),
+      });
+      const data = await adminFetch<{
+        messages: MessageSummary[];
+        hasMore: boolean;
+      }>(`/api/admin/messages?${params}`);
       if (generation !== listGeneration.current) return;
       setMessages((current) => {
         const ids = new Set((current ?? []).map((m) => m.id));
-        return [...(current ?? []), ...data.messages.filter((m) => !ids.has(m.id))];
+        return [
+          ...(current ?? []),
+          ...data.messages.filter((m) => !ids.has(m.id)),
+        ];
       });
       setHasMore(data.hasMore);
     } catch {
-      toast({ tone: "error", text: "Couldn't load older emails. Please try again." });
+      toast({
+        tone: "error",
+        text: "Couldn't load older emails. Please try again.",
+      });
     } finally {
       setLoadingMore(false);
     }
@@ -209,7 +261,10 @@ function AdminShell({ setup }: { setup: Setup }) {
           imported: number;
           remaining: number;
           automated: number;
-        }>("/api/admin/sync", { method: "POST" });
+        }>("/api/admin/sync", {
+          method: "POST",
+          body: { mailbox: mailbox || "INBOX" },
+        });
         imported += result.imported;
         automated += result.automated;
         setSync({ running: true, imported, error: "" });
@@ -238,13 +293,19 @@ function AdminShell({ setup }: { setup: Setup }) {
     }
     syncing.current = false;
     refresh();
-  }, [refresh, setup.database, setup.mailbox, toast]);
+  }, [refresh, setup.database, setup.mailbox, toast, mailbox]);
 
   useEffect(() => {
     // Sync once when the admin opens; later syncs are manual.
     const start = setTimeout(() => {
       loadStats();
       runSync();
+      if (setup.mailbox)
+        adminFetch<{ folders: { path: string; name: string }[] }>(
+          "/api/admin/mailboxes",
+        )
+          .then((data) => setMailboxes(data.folders))
+          .catch(() => {});
     }, 0);
     return () => clearTimeout(start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,18 +316,21 @@ function AdminShell({ setup }: { setup: Setup }) {
     return () => clearTimeout(timer);
   }, [loadMessages, search]);
 
-  const openFolder = useCallback((next: View) => {
-    if (next === view) {
+  const openFolder = useCallback(
+    (next: View) => {
+      if (next === view) {
+        setSelected(null);
+        return;
+      }
+      listGeneration.current++;
+      setHasMore(false);
+      setView(next);
       setSelected(null);
-      return;
-    }
-    listGeneration.current++;
-    setHasMore(false);
-    setView(next);
-    setSelected(null);
-    setMessages(null);
-    setSearch("");
-  }, [view]);
+      setMessages(null);
+      setSearch("");
+    },
+    [view],
+  );
 
   const openMessage = useCallback(
     (id: string) => {
@@ -307,7 +371,12 @@ function AdminShell({ setup }: { setup: Setup }) {
         else setSelected(null);
         return;
       }
-      if (showShortcuts || document.querySelector('[role="dialog"]') || isTyping(event.target)) return;
+      if (
+        showShortcuts ||
+        document.querySelector('[role="dialog"]') ||
+        isTyping(event.target)
+      )
+        return;
       if (event.key === "?") setShowShortcuts((v) => !v);
       else if (event.key === "/" && !isPage) {
         event.preventDefault();
@@ -369,6 +438,16 @@ function AdminShell({ setup }: { setup: Setup }) {
             label="Overview"
             active={view === "overview"}
             onClick={() => openFolder("overview")}
+          />
+          <NavItem
+            icon={<Users className="size-4" />}
+            label={
+              dueFollowUps
+                ? `Clients · ${dueFollowUps} due`
+                : "Clients & templates"
+            }
+            active={view === "workspace"}
+            onClick={() => openFolder("workspace")}
           />
           <p className="mt-5 mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-white/50 uppercase">
             Mail
@@ -515,7 +594,9 @@ function AdminShell({ setup }: { setup: Setup }) {
           </div>
         ) : null}
 
-        {view === "system" ? (
+        {view === "workspace" ? (
+          <WorkspacePanel />
+        ) : view === "system" ? (
           <main className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
             <SystemPanel onErrorsChanged={loadStats} />
           </main>
@@ -547,11 +628,36 @@ function AdminShell({ setup }: { setup: Setup }) {
                     {folderMeta.label}
                   </h1>
                   <span className="text-xs text-white/50 tabular-nums">
-                    {messages
-                      ? `${messages.length}${hasMore ? "+" : ""}`
-                      : ""}
+                    {messages ? `${messages.length}${hasMore ? "+" : ""}` : ""}
                   </span>
                 </div>
+                <label className="mt-3 block text-xs text-white/70">
+                  Mailbox folder
+                  <select
+                    aria-label="Mailbox folder"
+                    value={mailbox}
+                    onChange={(e) => {
+                      listGeneration.current++;
+                      setMessages(null);
+                      setHasMore(false);
+                      setSelected(null);
+                      setMailbox(e.target.value);
+                    }}
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-canvas p-2 text-sm"
+                  >
+                    <option value="">All synced folders</option>
+                    {mailboxes.map((f) => (
+                      <option key={f.path} value={f.path}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {mailbox ? (
+                  <p className="mt-2 text-xs text-white/60">
+                    Use Sync mailbox to import this folder’s history.
+                  </p>
+                ) : null}
                 <label className="relative mt-3 block">
                   <span className="sr-only">Search emails</span>
                   <Search
@@ -561,14 +667,22 @@ function AdminShell({ setup }: { setup: Setup }) {
                   <input
                     ref={searchRef}
                     value={search}
-                    onChange={(e) => { listGeneration.current++; setHasMore(false); setSearch(e.target.value); }}
+                    onChange={(e) => {
+                      listGeneration.current++;
+                      setHasMore(false);
+                      setSearch(e.target.value);
+                    }}
                     placeholder="Search"
                     className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pr-14 pl-9 text-sm text-white placeholder:text-white/50 focus:border-brand-cyan/40 focus:ring-2 focus:ring-brand-cyan/15 focus:outline-none"
                   />
                   {search ? (
                     <button
                       type="button"
-                      onClick={() => { listGeneration.current++; setHasMore(false); setSearch(""); }}
+                      onClick={() => {
+                        listGeneration.current++;
+                        setHasMore(false);
+                        setSearch("");
+                      }}
                       aria-label="Clear search"
                       className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-white/50 hover:text-white"
                     >
@@ -665,8 +779,12 @@ function AdminShell({ setup }: { setup: Setup }) {
                   ))
                 )}
                 {hasMore && messages ? (
-                  <button type="button" onClick={loadMore} disabled={loadingMore}
-                    className="mx-4 my-4 rounded-lg border border-white/15 px-4 py-2 text-sm text-white disabled:opacity-50">
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="mx-4 my-4 rounded-lg border border-white/15 px-4 py-2 text-sm text-white disabled:opacity-50"
+                  >
                     {loadingMore ? "Loading…" : "Load older emails"}
                   </button>
                 ) : null}
@@ -710,22 +828,25 @@ function AdminShell({ setup }: { setup: Setup }) {
       {/* Bottom tabs (mobile) */}
       <nav
         aria-label="Admin"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-white/[0.08] bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-white/[0.08] bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {(
           [
             ["overview", "Overview", LayoutDashboard],
+            ["workspace", "Clients", Users],
             ["all", "All emails", Inbox],
             ["rules", "Project rules", SlidersHorizontal],
             ["system", "System", Activity],
           ] as const
         ).map(([key, label, Icon]) => {
           const count =
-            key === "all"
-              ? stats?.counts.unread
-              : key === "system"
-                ? stats?.counts.errors
-                : 0;
+            key === "workspace"
+              ? dueFollowUps
+              : key === "all"
+                ? stats?.counts.unread
+                : key === "system"
+                  ? stats?.counts.errors
+                  : 0;
           return (
             <button
               key={key}

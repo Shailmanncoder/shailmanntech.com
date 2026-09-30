@@ -52,7 +52,9 @@ describe.skipIf(!ready)("mailbox sync", async () => {
     CONTACT_FROM_EMAIL: "Shailmann Tech <hello@shailmanntech.com>",
   });
   const { db } = await import("@/lib/admin/db");
-  const { syncMailbox } = await import("@/lib/admin/mailbox");
+  const { syncMailbox, listMailboxFolders, downloadAttachment } = await import(
+    "@/lib/admin/mailbox"
+  );
 
   beforeAll(async () => {
     const client = imap();
@@ -86,7 +88,13 @@ describe.skipIf(!ready)("mailbox sync", async () => {
         email(`"Person ${i}" <person${i}@example.com>`, `Question ${i}`),
       );
     }
-    for (const raw of messages) await client.append("INBOX", raw, undefined, new Date("2020-01-01T12:00:00Z"));
+    for (const raw of messages)
+      await client.append(
+        "INBOX",
+        raw,
+        undefined,
+        new Date("2020-01-01T12:00:00Z"),
+      );
     await client.logout();
   });
 
@@ -170,5 +178,34 @@ describe.skipIf(!ready)("mailbox sync", async () => {
     );
     await client.logout();
     expect(await syncMailbox()).toMatchObject({ imported: 1, remaining: 0 });
+  });
+  it("syncs Sent independently and downloads attachments without marking mail read", async () => {
+    const client = imap();
+    await client.connect();
+    await client.mailboxCreate("Sent").catch(() => {});
+    const lock = await client.getMailboxLock("Sent");
+    try {
+      await client.messageDelete("1:*").catch(() => {});
+    } finally {
+      lock.release();
+    }
+    await client.append(
+      "Sent",
+      'From: support@shailmanntech.test\r\nTo: client@example.com\r\nSubject: Scope attached\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="abc"\r\n\r\n--abc\r\nContent-Type: text/plain\r\n\r\nAttached\r\n--abc\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename="scope.txt"\r\nContent-Transfer-Encoding: base64\r\n\r\naGVsbG8=\r\n--abc--',
+    );
+    await client.logout();
+    expect((await listMailboxFolders()).some((f) => f.path === "Sent")).toBe(
+      true,
+    );
+    expect((await syncMailbox("Sent")).imported).toBe(1);
+    const sql = await db();
+    const [row] = await sql`select * from admin_messages where mailbox='Sent'`;
+    expect(row.contact_email).toBe("client@example.com");
+    expect(row.status).toBe("replied");
+    expect(row.direction).toBe("outgoing");
+    expect(row.attachments).toHaveLength(1);
+    const attachment = await downloadAttachment(String(row.id), 0);
+    expect(attachment?.content.toString()).toBe("hello");
+    expect((await syncMailbox("Sent")).imported).toBe(0);
   });
 });

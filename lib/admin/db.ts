@@ -11,7 +11,7 @@ import postgres from "postgres";
  */
 
 /** The newest migration this code depends on. Bump it with each migration. */
-export const EXPECTED_SCHEMA_VERSION = "0005";
+export const EXPECTED_SCHEMA_VERSION = "0006";
 
 type Sql = ReturnType<typeof postgres>;
 

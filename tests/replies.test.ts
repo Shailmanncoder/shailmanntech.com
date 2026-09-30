@@ -75,6 +75,21 @@ describe.skipIf(!database)("sending replies", async () => {
     expect(after.replies.map((r) => r.body)).toEqual(["Thanks, Ada!"]);
   });
 
+  it("sends attachments and distinguishes different files on retries", async () => {
+    const files = [{ filename: "scope.txt", content: "aGVsbG8=" }];
+    await sendReply(await message(), "Attached scope", files);
+    expect(
+      JSON.parse(String(resend.mock.calls[0][1].body)).attachments,
+    ).toEqual(files);
+    await sendReply(await message(), "Attached scope", files);
+    expect(resend).toHaveBeenCalledTimes(1);
+    await sendReply(await message(), "Attached scope", [
+      { filename: "scope.txt", content: "bmV3" },
+    ]);
+    expect(resend).toHaveBeenCalledTimes(2);
+    expect(new Set(sentKeys()).size).toBe(2);
+  });
+
   it("never sends the same reply twice", async () => {
     await sendReply(await message(), "Thanks, Ada!");
     const again = await sendReply(await message(), "  Thanks, Ada!  ");
