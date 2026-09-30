@@ -10,6 +10,7 @@ import {
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CursorGlow } from "@/components/layout/CursorGlow";
+import { PublicOnly } from "@/components/layout/PublicOnly";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -103,12 +104,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             __html: jsonLd([organizationSchema, websiteSchema]),
           }}
         />
-        <CursorGlow />
-        <Navbar />
+        <PublicOnly>
+          <CursorGlow />
+          <Navbar />
+        </PublicOnly>
         <main id="main" className="relative z-10 flex-1">
           {children}
         </main>
-        <Footer />
+        <PublicOnly>
+          <Footer />
+        </PublicOnly>
       </body>
     </html>
   );

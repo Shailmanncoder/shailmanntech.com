@@ -1,11 +1,14 @@
 import "server-only";
+import { isProduction } from "./config";
+import { reportError } from "./errors";
 
 /**
  * Cloudflare Turnstile verification for the contact form.
  *
  * Enabled by TURNSTILE_SECRET_KEY (with NEXT_PUBLIC_TURNSTILE_SITE_KEY on the
- * client). Without the secret the check is skipped, so local development works
- * with no Cloudflare account.
+ * client). Production refuses every submission unless both are set; local
+ * development skips the check so it works without a Cloudflare account (the
+ * contact route's rate limits still apply).
  */
 
 export async function verifyTurnstile(
@@ -13,7 +16,20 @@ export async function verifyTurnstile(
   remoteIp: string | null,
 ): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
+  if (!secret) {
+    // Production must have the bot check, and a page that shows the widget
+    // without a server secret is a broken deployment. Either way, refuse
+    // rather than let requests through unchecked. Local development runs
+    // without it (rate limits still apply).
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || isProduction()) {
+      await reportError(
+        "config",
+        "Contact form refused a submission: Turnstile isn't fully configured.",
+      );
+      return false;
+    }
+    return true;
+  }
   if (!token) return false;
 
   const body = new URLSearchParams({ secret, response: token });

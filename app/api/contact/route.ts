@@ -5,11 +5,21 @@ import {
   type ContactResponse,
 } from "@/lib/contact";
 import { deliverContactRequest } from "@/lib/contact-delivery";
+import {
+  finishSubmission,
+  recordSubmission,
+  submissionKey,
+} from "@/lib/contact-submissions";
 import { site } from "@/lib/site";
+import { reportError } from "@/lib/errors";
+import { allow } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const CONTACT_PER_IP_PER_HOUR = 5;
+const CONTACT_PER_ADDRESS_PER_DAY = 3;
 
 const MAX_LENGTHS: Record<string, number> = {
   name: 120,
@@ -61,10 +71,32 @@ export async function POST(request: Request) {
     );
   }
 
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+  // Rate limits apply whether or not Turnstile is configured. The per-address
+  // limit stops the form being used to flood someone with confirmation emails.
+  const withinLimits =
+    (await allow(`contact-ip:${ip}`, CONTACT_PER_IP_PER_HOUR, 3600)) &&
+    (await allow(
+      `contact-to:${payload.email.toLowerCase()}`,
+      CONTACT_PER_ADDRESS_PER_DAY,
+      86_400,
+    ));
+  if (!withinLimits) {
+    return NextResponse.json<ContactResponse>(
+      {
+        ok: false,
+        code: "failed",
+        message: `That's a lot of requests in a short time. Please try again later, or email ${site.email}.`,
+      },
+      { status: 429 },
+    );
+  }
+
   const token =
     typeof raw.turnstileToken === "string" ? raw.turnstileToken : "";
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  if (!(await verifyTurnstile(token, ip ?? null))) {
+  if (!(await verifyTurnstile(token, ip === "unknown" ? null : ip))) {
     return NextResponse.json<ContactResponse>(
       {
         ok: false,
@@ -76,13 +108,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await deliverContactRequest(payload);
+  // Saved before sending. A repeat of a submission that already went through
+  // (a double click, a refresh, a retry) is acknowledged without resending.
+  const key = submissionKey(payload);
+  const recorded = await recordSubmission(payload, key).catch(async (error) => {
+    await reportError("contact-delivery", error, {
+      stage: "saving submission",
+    });
+    return { duplicate: false as const, id: null };
+  });
+  if (recorded.duplicate) {
+    return NextResponse.json<ContactResponse>({ ok: true });
+  }
+
+  const result = await deliverContactRequest(payload, key);
+  await finishSubmission(recorded.id, result).catch((error) =>
+    reportError("contact-delivery", error, {
+      stage: "saving outcome",
+      id: recorded.id,
+    }),
+  );
 
   if (result.status === "sent") {
     return NextResponse.json<ContactResponse>({ ok: true });
   }
 
   if (result.status === "not_configured") {
+    await reportError(
+      "config",
+      "A contact request arrived but no email delivery is configured.",
+    );
     return NextResponse.json<ContactResponse>(
       {
         ok: false,
@@ -93,7 +148,9 @@ export async function POST(request: Request) {
     );
   }
 
-  console.error("Contact delivery failed:", result.message);
+  await reportError("contact-delivery", result.message, {
+    service: payload.service,
+  });
 
   return NextResponse.json<ContactResponse>(
     {

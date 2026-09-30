@@ -72,6 +72,26 @@ requirement, so a hand-supplied PNG dropped in `public/products/` is fine.
 > The NexusMeet description is intentionally a placeholder — it is marked with a
 > `NOTE(content)` comment in `lib/content.ts`.
 
+## Admin area
+
+`/admin` is a private, single-user dashboard for the support@ inbox:
+
+- **Inbox** — the mailbox is synced read-only over IMAP into Postgres (the last
+  12 months on first sync, then new mail). Search, filters (awaiting reply,
+  form requests, starred, replied, archived), star, archive and CSV export.
+- **Replies** — sent through Resend from the support address, threaded with the
+  original. Replies are recorded in the admin, not in the mailbox's Sent folder.
+- **AI (OpenAI)** — analyse an email (summary, priority, what to cover), draft a
+  reply from a plain-language instruction, and ask questions about the inbox.
+  Drafts are never sent automatically.
+- **Overview** — this month vs last, awaiting reply, median reply time and a
+  12-month chart of form requests vs other email.
+
+Everything is configured with environment variables (see `.env.example`); the
+admin lists anything that isn't connected yet. Sign-in credentials live only in
+the environment, sessions are signed httpOnly cookies, and five failed attempts
+lock an IP out for 15 minutes.
+
 ## Contact form
 
 The form posts to `/api/contact`. Validation is shared between the browser and
@@ -94,6 +114,21 @@ form shows an honest fallback with a pre-filled `mailto:` link — it never repo
 a delivery that did not happen.
 
 A hidden honeypot field silently discards bot submissions.
+
+## Tests
+
+```bash
+npm test
+```
+
+Covers automated-mail detection, admin sign-in and sessions, the login
+lockout, and the contact form's rate limits and bot check. The reply-sending
+and database-schema tests need a throwaway Postgres and are skipped without one:
+
+```bash
+docker run -d --rm --name test-pg -e POSTGRES_PASSWORD=pass -p 55433:5432 postgres:16-alpine
+TEST_DATABASE_URL=postgres://postgres:pass@localhost:55433/postgres npm test
+```
 
 ## Accessibility & motion
 

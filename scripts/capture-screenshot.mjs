@@ -50,7 +50,9 @@ try {
   });
 } catch (error) {
   console.log("no");
-  console.error(`\n${url} is not responding (${error.cause?.code ?? error.name}).`);
+  console.error(
+    `\n${url} is not responding (${error.cause?.code ?? error.name}).`,
+  );
   console.error("Nothing was captured. Bring the site up, or drop a PNG into");
   console.error("public/products/ by hand and point lib/content.ts at it.");
   process.exit(1);
@@ -58,7 +60,9 @@ try {
 
 if (!response.ok) {
   console.log("no");
-  console.error(`\n${url} returned HTTP ${response.status}. Nothing was captured.`);
+  console.error(
+    `\n${url} returned HTTP ${response.status}. Nothing was captured.`,
+  );
   process.exit(1);
 }
 console.log(`yes (HTTP ${response.status})`);
@@ -99,7 +103,9 @@ const kb = Math.round(statSync(out).size / 1024);
 // A real page is rarely this small at 2880x1980; an error or blank page is.
 if (kb < 40) {
   console.error(`\nCapture is only ${kb}KB — that usually means a blank or`);
-  console.error("error page. Check public/products/${slug}.png before using it.");
+  console.error(
+    "error page. Check public/products/${slug}.png before using it.",
+  );
   process.exit(1);
 }
 

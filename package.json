@@ -4,29 +4,42 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "capture": "node scripts/capture-screenshot.mjs"
+    "capture": "node scripts/capture-screenshot.mjs",
+    "test": "vitest run",
+    "pretypecheck": "node scripts/clean-duplicates.mjs",
+    "prebuild": "node scripts/clean-duplicates.mjs",
+    "check": "node scripts/release.mjs",
+    "release": "node scripts/release.mjs --deploy",
+    "migrate": "node scripts/migrate.mjs",
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
     "framer-motion": "^13.3.0",
+    "imapflow": "^2.1.2",
     "lucide-react": "^1.46.0",
+    "mailparser": "^3.9.31",
     "next": "16.3.5",
+    "openai": "^7.24.0",
+    "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/mailparser": "^3.9.0",
+    "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.2"
   },
   "description": "Shailmann Tech \u2014 premium portfolio site for a modern technology studio."
 }
