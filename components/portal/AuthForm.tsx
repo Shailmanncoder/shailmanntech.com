@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Turnstile, turnstileSiteKey } from "@/components/forms/Turnstile";
 import { LogoMark } from "@/components/ui/Logo";
-import { site } from "@/lib/site";
 
 type Mode = "login" | "signup" | "verify" | "forgot" | "reset";
 
@@ -372,8 +371,22 @@ export function AuthForm({
           </button>
         )}
       </p>
-      <p className="mt-3 text-center text-xs text-white/50">
-        Client portal · {site.domain}
+      <p className="mt-3 text-center text-xs leading-relaxed text-white/50">
+        By continuing you agree to our{" "}
+        <a
+          href="/terms"
+          className="underline underline-offset-2 hover:text-white"
+        >
+          Terms of Service
+        </a>{" "}
+        and{" "}
+        <a
+          href="/privacy"
+          className="underline underline-offset-2 hover:text-white"
+        >
+          Privacy Policy
+        </a>
+        .
       </p>
     </div>
   );

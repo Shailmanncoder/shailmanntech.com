@@ -23,6 +23,8 @@ const columns: { heading: string; links: FooterLink[] }[] = [
       { label: site.email, href: mailto },
       { label: "Start a project", href: "/contact" },
       { label: "All services", href: "/services" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
     ],
   },
 ];

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -150,11 +151,25 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             {/* Wrapper controls visibility: a `hidden` utility on the button
                 itself would lose to its own base `inline-flex`. */}
+            {/* Text where there's room; an icon while the centred links
+                share the bar (1024–1279px). */}
             <Link
               href="/dashboard"
-              className="hidden h-10 items-center rounded-full px-4 text-sm text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+              className="hidden h-10 items-center rounded-full px-4 text-sm text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex lg:hidden xl:inline-flex"
             >
               Client login
+            </Link>
+            <Link
+              href="/dashboard"
+              aria-label="Client login"
+              title="Client login"
+              className="hidden size-10 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white lg:inline-flex xl:hidden"
+            >
+              <UserRound
+                aria-hidden="true"
+                className="size-[1.125rem]"
+                strokeWidth={1.75}
+              />
             </Link>
             <div className="hidden sm:block">
               <ActionButton
