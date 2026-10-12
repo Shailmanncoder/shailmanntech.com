@@ -28,7 +28,7 @@ export type DeliveryResult =
   | { status: "not_configured" }
   | { status: "failed"; message: string };
 
-function renderPlainText(payload: ContactPayload) {
+export function renderPlainText(payload: ContactPayload) {
   return [
     `New project request from ${site.domain}`,
     "",

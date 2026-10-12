@@ -219,6 +219,25 @@ export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
             await sql`update admin_messages set attachments=${sql.json(attachments)} where mailbox=${MAILBOX} and uidvalidity=${uidValidity} and uid=${message.uid}`;
           imported += rows.length;
           if (rows.length && reason) automated++;
+          // A website form request was already checked and announced when it
+          // was submitted: carry that over instead of checking it again.
+          if (rows.length && source === "form" && !outgoing) {
+            await sql`
+              update admin_messages m set
+                fit = s.fit, fit_reason = s.fit_reason,
+                smart_draft = s.smart_draft,
+                smart_draft_at = case when s.smart_draft is null then null else now() end,
+                alerted_at = coalesce(s.alerted_at, now())
+              from (
+                select fit, fit_reason, smart_draft, alerted_at from contact_submissions
+                where lower(email) = ${contactEmail}
+                  and created_at between ${receivedAt}::timestamptz - interval '2 hours'
+                                     and ${receivedAt}::timestamptz + interval '2 hours'
+                order by abs(extract(epoch from created_at - ${receivedAt}::timestamptz))
+                limit 1
+              ) s
+              where m.id = ${rows[0].id} and s.fit is not null`;
+          }
         }
       }
 

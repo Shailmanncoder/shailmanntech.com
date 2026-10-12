@@ -1,6 +1,7 @@
 import "server-only";
 import { inboxAddress } from "@/lib/contact-delivery";
 import { configIssues } from "@/lib/config";
+import { checkTelegram } from "@/lib/telegram";
 import { aiConfigured, checkAiConnection } from "./ai";
 import {
   EXPECTED_SCHEMA_VERSION,
@@ -173,12 +174,34 @@ function checkConfig() {
   });
 }
 
+function checkAlerts() {
+  return timed("alerts", "Lead alerts (Telegram)", async () => {
+    if (!process.env.TELEGRAM_BOT_TOKEN)
+      return off("TELEGRAM_BOT_TOKEN isn't set.");
+    const bot = await checkTelegram();
+    if (!process.env.TELEGRAM_CHAT_ID) {
+      return {
+        status: "warning",
+        detail: `Bot @${bot} works, but TELEGRAM_CHAT_ID isn't set. Message the bot, then use "Find my chat ID" below.`,
+      };
+    }
+    const schedule = process.env.CRON_SECRET
+      ? "emails checked every 10 minutes"
+      : "CRON_SECRET isn't set, so direct emails are only checked when you open the admin";
+    return {
+      status: process.env.CRON_SECRET ? "ok" : "warning",
+      detail: `Bot @${bot} · ${schedule}`,
+    };
+  });
+}
+
 export async function runHealthChecks() {
   return Promise.all([
     checkDatabase(),
     checkMailbox(),
     checkEmail(),
     checkAi(),
+    checkAlerts(),
     checkConfig(),
   ]);
 }

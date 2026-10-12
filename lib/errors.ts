@@ -10,6 +10,7 @@ import { adminDbConfigured, db } from "@/lib/admin/db";
 export type ErrorSource =
   | "admin-api"
   | "ai"
+  | "alerts"
   | "config"
   | "contact-delivery"
   | "contact-confirmation"

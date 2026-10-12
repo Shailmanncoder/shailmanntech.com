@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { AlertsCard } from "./AlertsCard";
 import { adminFetch, formatDate, relativeTime } from "./client";
 import { Button, Card, ConfirmDialog, Skeleton, useToast } from "./ui";
 
@@ -66,6 +67,7 @@ const SOURCES: Record<string, string> = {
   "admin-api": "Admin",
   ai: "AI",
   config: "Settings",
+  alerts: "Lead alerts",
   "contact-delivery": "Contact form",
   "contact-confirmation": "Confirmation email",
   "mailbox-sync": "Mailbox sync",
@@ -258,6 +260,8 @@ export function SystemPanel({
               ))}
         </ul>
       </Card>
+
+      <AlertsCard />
 
       <Card className="flex flex-wrap items-center gap-4 px-5 py-4">
         <ShieldCheck

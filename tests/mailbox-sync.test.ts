@@ -1,5 +1,5 @@
 import { ImapFlow } from "imapflow";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "./helpers/database";
 
 /**
@@ -52,9 +52,19 @@ describe.skipIf(!ready)("mailbox sync", async () => {
     CONTACT_FROM_EMAIL: "Shailmann Tech <hello@shailmanntech.com>",
   });
   const { db } = await import("@/lib/admin/db");
-  const { syncMailbox, listMailboxFolders, downloadAttachment } = await import(
-    "@/lib/admin/mailbox"
-  );
+  const { syncMailbox, listMailboxFolders, downloadAttachment } =
+    await import("@/lib/admin/mailbox");
+  const { checkNewInboxLeads } = await import("@/lib/admin/leads");
+
+  // Ana's form request was checked when she submitted it (see beforeAll).
+  beforeAll(async () => {
+    const sql = await db();
+    await sql`
+      insert into contact_submissions (dedupe_key, name, email, service, payload,
+        status, fit, fit_reason, smart_draft, alerted_at)
+      values ('k-ana', 'Ana', 'ana@example.net', 'React Development', '{}',
+        'sent', 'yes', 'Fits React work', 'Dear Ana, …', now())`;
+  });
 
   beforeAll(async () => {
     const client = imap();
@@ -207,5 +217,49 @@ describe.skipIf(!ready)("mailbox sync", async () => {
     const attachment = await downloadAttachment(String(row.id), 0);
     expect(attachment?.content.toString()).toBe("hello");
     expect((await syncMailbox("Sent")).imported).toBe(0);
+  });
+
+  it("gives a form request the fit check done when it was submitted", async () => {
+    const sql = await db();
+    const [row] = await sql`
+      select fit, fit_reason, smart_draft, alerted_at from admin_messages
+      where source = 'form' and contact_email = 'ana@example.net'`;
+    expect(row).toMatchObject({
+      fit: "yes",
+      fit_reason: "Fits React work",
+      smart_draft: "Dear Ana, …",
+    });
+    expect(row.alerted_at).not.toBeNull();
+  });
+
+  it("alerts about new emails from people in batches, each only once", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    process.env.TELEGRAM_CHAT_ID = "42";
+    const texts: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        texts.push(JSON.parse(String(init.body)).text);
+        return Response.json({ ok: true });
+      }),
+    );
+    try {
+      expect(await checkNewInboxLeads(5)).toBe(5);
+      expect(await checkNewInboxLeads(5)).toBe(5);
+      let more: number;
+      do more = await checkNewInboxLeads(50);
+      while (more > 0);
+
+      // Every person's email exactly once; no form requests, no automated mail.
+      expect(new Set(texts).size).toBe(texts.length);
+      expect(texts.some((t) => t.includes("Priya Sharma"))).toBe(true);
+      expect(texts.some((t) => t.includes("ana@example.net"))).toBe(false);
+      expect(texts.some((t) => t.includes("godaddy"))).toBe(false);
+      expect(await checkNewInboxLeads(50)).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+      delete process.env.TELEGRAM_BOT_TOKEN;
+      delete process.env.TELEGRAM_CHAT_ID;
+    }
   });
 });

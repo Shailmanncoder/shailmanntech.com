@@ -1,0 +1,26 @@
+name: Check mail
+
+# Every 10 minutes, ask the live site to import new mail and alert the owner
+# about good-fit leads. Needs the repository secret CRON_SECRET to match the
+# CRON_SECRET set in Vercel. GitHub may delay scheduled runs by a few minutes.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run the mail check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET isn't set for this repository; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://shailmanntech.com/api/cron/check-mail
