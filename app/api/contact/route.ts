@@ -4,12 +4,7 @@ import {
   type ContactPayload,
   type ContactResponse,
 } from "@/lib/contact";
-import { deliverContactRequest } from "@/lib/contact-delivery";
-import {
-  finishSubmission,
-  recordSubmission,
-  submissionKey,
-} from "@/lib/contact-submissions";
+import { intake } from "@/lib/intake";
 import { site } from "@/lib/site";
 import { reportError } from "@/lib/errors";
 import { allow } from "@/lib/rate-limit";
@@ -108,28 +103,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Saved before sending. A repeat of a submission that already went through
-  // (a double click, a refresh, a retry) is acknowledged without resending.
-  const key = submissionKey(payload);
-  const recorded = await recordSubmission(payload, key).catch(async (error) => {
-    await reportError("contact-delivery", error, {
-      stage: "saving submission",
-    });
-    return { duplicate: false as const, id: null };
-  });
-  if (recorded.duplicate) {
-    return NextResponse.json<ContactResponse>({ ok: true });
-  }
-
-  const result = await deliverContactRequest(payload, key);
-  await finishSubmission(recorded.id, result).catch((error) =>
-    reportError("contact-delivery", error, {
-      stage: "saving outcome",
-      id: recorded.id,
-    }),
-  );
-
-  if (result.status === "sent") {
+  const result = await intake(payload);
+  if (result.status === "sent" || result.status === "duplicate") {
     return NextResponse.json<ContactResponse>({ ok: true });
   }
 

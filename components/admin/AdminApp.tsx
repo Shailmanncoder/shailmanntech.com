@@ -10,6 +10,7 @@ import {
   Clock,
   Download,
   FileText,
+  FolderKanban,
   Inbox,
   Keyboard,
   LayoutDashboard,
@@ -47,6 +48,7 @@ import { MessagePanel } from "./MessagePanel";
 import { FitBadge } from "./FitBadge";
 import { Overview } from "./Overview";
 import { RulesPanel } from "./RulesPanel";
+import { ProjectsPanel } from "./ProjectsPanel";
 import { WorkspacePanel, type Lead } from "./WorkspacePanel";
 import { SystemPanel } from "./SystemPanel";
 import {
@@ -65,7 +67,13 @@ type Setup = {
   ai: boolean;
   email: boolean;
 };
-type View = "overview" | "rules" | "system" | "workspace" | InboxFilter;
+type View =
+  | "overview"
+  | "rules"
+  | "system"
+  | "workspace"
+  | "projects"
+  | InboxFilter;
 
 const FOLDERS: {
   key: InboxFilter;
@@ -171,7 +179,8 @@ function AdminShell({ setup }: { setup: Setup }) {
     view === "overview" ||
     view === "rules" ||
     view === "system" ||
-    view === "workspace";
+    view === "workspace" ||
+    view === "projects";
   const folder: InboxFilter = isPage ? "all" : view;
   const missing = (Object.keys(setup) as (keyof Setup)[]).filter(
     (key) => !setup[key],
@@ -449,6 +458,12 @@ function AdminShell({ setup }: { setup: Setup }) {
             active={view === "workspace"}
             onClick={() => openFolder("workspace")}
           />
+          <NavItem
+            icon={<FolderKanban className="size-4" />}
+            label="Projects"
+            active={view === "projects"}
+            onClick={() => openFolder("projects")}
+          />
           <p className="mt-5 mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-white/50 uppercase">
             Mail
           </p>
@@ -594,7 +609,9 @@ function AdminShell({ setup }: { setup: Setup }) {
           </div>
         ) : null}
 
-        {view === "workspace" ? (
+        {view === "projects" ? (
+          <ProjectsPanel />
+        ) : view === "workspace" ? (
           <WorkspacePanel />
         ) : view === "system" ? (
           <main className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8">

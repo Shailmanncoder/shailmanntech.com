@@ -150,6 +150,12 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             {/* Wrapper controls visibility: a `hidden` utility on the button
                 itself would lose to its own base `inline-flex`. */}
+            <Link
+              href="/dashboard"
+              className="hidden h-10 items-center rounded-full px-4 text-sm text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+            >
+              Client login
+            </Link>
             <div className="hidden sm:block">
               <ActionButton
                 href="/contact"
@@ -255,6 +261,13 @@ export function Navbar() {
                 >
                   Let&rsquo;s Build
                 </ActionButton>
+                <Link
+                  href="/dashboard"
+                  onClick={close}
+                  className="mt-2 flex h-11 w-full items-center justify-center rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Client login
+                </Link>
                 <a
                   href={`mailto:${site.email}`}
                   className="mt-3 block text-center font-mono text-xs tracking-wide text-white/45 transition-colors hover:text-white/75"
