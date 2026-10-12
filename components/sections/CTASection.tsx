@@ -1,4 +1,4 @@
-import { mailto, site } from "@/lib/site";
+import { bookingUrl, mailto, site } from "@/lib/site";
 import { Reveal } from "@/components/ui/Reveal";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { UnderlineLink } from "@/components/ui/UnderlineLink";
@@ -46,9 +46,16 @@ export function CTASection() {
 
           <Reveal delay={0.18}>
             <div className="mt-10 flex w-full flex-col items-center gap-5 sm:mt-12">
-              <ActionButton href={mailto} size="lg" arrow="right">
-                Start a Conversation
-              </ActionButton>
+              <div className="flex flex-col items-center gap-3 sm:flex-row">
+                <ActionButton href={mailto} size="lg" arrow="right">
+                  Start a Conversation
+                </ActionButton>
+                {bookingUrl ? (
+                  <ActionButton href={bookingUrl} size="lg" variant="secondary">
+                    Book a 20-minute call
+                  </ActionButton>
+                ) : null}
+              </div>
               <UnderlineLink href={mailto} className="font-mono text-xs">
                 {site.email}
               </UnderlineLink>

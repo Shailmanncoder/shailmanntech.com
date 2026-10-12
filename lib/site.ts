@@ -12,6 +12,15 @@ export const site = {
 
 export const mailto = `mailto:${site.email}`;
 
+/**
+ * Where visitors book a call (a Cal.com link, set as NEXT_PUBLIC_BOOKING_URL
+ * in Vercel). Booking buttons only appear when it's set to an https link.
+ */
+export const bookingUrl = (() => {
+  const url = process.env.NEXT_PUBLIC_BOOKING_URL?.trim();
+  return url && /^https:\/\/\S+$/.test(url) ? url : null;
+})();
+
 export type NavItem = {
   label: string;
   href: string;

@@ -1,7 +1,7 @@
 import "server-only";
 import OpenAI from "openai";
 import { services } from "@/lib/content";
-import { site } from "@/lib/site";
+import { bookingUrl, site } from "@/lib/site";
 import type {
   FitDecision,
   InboxStats,
@@ -129,6 +129,11 @@ function rulesBlock(rules: ProjectRules) {
   ].join("\n\n");
 }
 
+/** How a "yes" reply proposes the call: a booking link when one is set. */
+const CALL_STEP = bookingUrl
+  ? `invite them to pick a time for a short discovery call at ${bookingUrl} (include this exact link on its own line)`
+  : "propose a short discovery call and ask for two or three times that suit them";
+
 const SIGN_OFF = `Sign off as:
 Shailmann
 ${site.name}`;
@@ -177,7 +182,7 @@ export async function smartReply(
 - "spam": spam, phishing, scams or cold sales pitches.
 
 Then write "draft", the body of the reply email:
-- "yes": formal and professional. Thank them, confirm specifically what we can help with, propose a short discovery call and ask for two or three times that suit them, and ask only the few questions still needed to scope the work.
+- "yes": formal and professional. Thank them, confirm specifically what we can help with, ${CALL_STEP}, and ask only the few questions still needed to scope the work.
 - "no": polite, warm and respectful. Thank them for thinking of us, explain briefly and honestly that it isn't a fit for us (or that we can't take it on right now), and wish them well. You may suggest the kind of specialist to look for, but never name or invent specific companies or people.
 - "info": polite and professional. Thank them, show interest, and ask clearly for the specific missing details (scope, budget range, timeline) so we can confirm whether we're the right fit.
 - "other": a helpful, professional reply to what they actually asked. Don't promise anything the rules or email don't support.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin } from "lucide-react";
-import { mailto, site } from "@/lib/site";
+import { CalendarDays, Clock, Mail, MapPin } from "lucide-react";
+import { bookingUrl, mailto, site } from "@/lib/site";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { breadcrumbSchema, jsonLd } from "@/lib/structured-data";
 import { PageHero } from "@/components/layout/PageHero";
 import { Section } from "@/components/ui/Section";
@@ -122,6 +123,32 @@ export default function ContactPage() {
                 ))}
               </ul>
             </Reveal>
+
+            {bookingUrl ? (
+              <Reveal delay={0.12}>
+                <div className="mt-10 rounded-2xl border border-brand-cyan/20 bg-brand-cyan/[0.04] p-6">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <CalendarDays
+                      aria-hidden="true"
+                      className="size-4 text-brand-cyan"
+                    />
+                    Prefer to talk it through?
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-white/60">
+                    Pick a time for a free 20-minute call. Bring the idea;
+                    we&rsquo;ll bring the questions.
+                  </p>
+                  <ActionButton
+                    href={bookingUrl}
+                    variant="secondary"
+                    arrow="right"
+                    className="mt-5"
+                  >
+                    Book a call
+                  </ActionButton>
+                </div>
+              </Reveal>
+            ) : null}
 
             <Reveal delay={0.14}>
               <div className="mt-10 rounded-2xl border border-white/8 bg-white/[0.02] p-6">

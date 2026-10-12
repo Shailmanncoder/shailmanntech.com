@@ -19,7 +19,7 @@ import {
   type FieldErrors,
 } from "@/lib/contact";
 import { serviceOptions } from "@/lib/content";
-import { site } from "@/lib/site";
+import { bookingUrl, site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { UnderlineLink } from "@/components/ui/UnderlineLink";
@@ -166,6 +166,15 @@ export function ContactForm() {
             Thanks for reaching out — your project request is with us and
             we&rsquo;ll reply to the email address you gave.
           </p>
+          {bookingUrl ? (
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-white/60">
+              Want to talk sooner?{" "}
+              <UnderlineLink href={bookingUrl} className="text-sm text-white">
+                Book a 20-minute call
+              </UnderlineLink>
+              .
+            </p>
+          ) : null}
         </div>
         <button
           type="button"

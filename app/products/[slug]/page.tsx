@@ -19,6 +19,7 @@ import {
   ProductScreenshot,
 } from "@/components/sections/ProductVisuals";
 import { CTASection } from "@/components/sections/CTASection";
+import { CaseStudy } from "@/components/sections/CaseStudy";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -144,6 +145,8 @@ export default async function ProductPage({ params }: Params) {
           </div>
         </div>
       </Section>
+
+      <CaseStudy product={product} />
 
       <Section divider aria-labelledby="highlights-heading">
         <SectionHeading

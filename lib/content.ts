@@ -39,6 +39,30 @@ export type Product = {
   highlights: { title: string; body: string }[];
   /** Tailwind gradient stops driving each product's accent. */
   accent: { from: string; to: string; glow: string };
+  /**
+   * The story behind the product, shown on its page as a case study. Only
+   * real, confirmed facts go here — the section is hidden until it's filled.
+   */
+  caseStudy?: CaseStudy;
+};
+
+export type CaseStudy = {
+  /** e.g. "Designed and built end to end" */
+  role: string;
+  /** e.g. "2025" */
+  year: string;
+  /** e.g. "Live" or "In private beta" */
+  status: string;
+  /** The problem, in two or three sentences. */
+  challenge: string;
+  /** How it was built: three to five short steps. */
+  approach: { title: string; body: string }[];
+  /** Measurable results, e.g. { value: "1,200", label: "students enrolled" }. */
+  outcomes?: { value: string; label: string }[];
+  /** Extra screenshots in public/products/, with what each one shows. */
+  gallery?: { src: string; alt: string; caption: string }[];
+  /** A user or client in their own words, with permission to quote. */
+  quote?: { text: string; author: string; role: string };
 };
 
 export const products: Product[] = [
