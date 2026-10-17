@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/portal/projects";
 import { ProgressBar, StatusBadge, When } from "./status";
+import { Linkify } from "@/components/ui/Linkify";
 
 type Mail = { from: "them" | "us"; subject: string; body: string; at: string };
 
@@ -210,7 +211,7 @@ export function Dashboard({
                     {m.subject}
                   </p>
                   <p className="mt-2 line-clamp-6 text-sm leading-relaxed whitespace-pre-wrap text-white/70">
-                    {m.body}
+                    <Linkify text={m.body} />
                   </p>
                 </li>
               ))}

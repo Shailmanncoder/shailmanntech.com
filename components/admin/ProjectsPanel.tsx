@@ -16,6 +16,7 @@ import {
 } from "@/components/portal/status";
 import { adminFetch } from "./client";
 import { Button, Card, Skeleton, useToast } from "./ui";
+import { Linkify } from "@/components/ui/Linkify";
 
 const STATUSES = Object.keys(STATUS_TEXT) as ProjectStatus[];
 type Detail = { project: Project; updates: ProjectUpdate[] };
@@ -246,7 +247,7 @@ export function ProjectsPanel() {
                 {detail.project.budget ? ` · ${detail.project.budget}` : ""}
               </p>
               <p className="mt-4 text-sm leading-relaxed whitespace-pre-wrap text-white/75">
-                {detail.project.description}
+                <Linkify text={detail.project.description} />
               </p>
             </header>
 
@@ -283,7 +284,7 @@ export function ProjectsPanel() {
                       ) : null}
                       {u.body ? (
                         <p className="mt-2 whitespace-pre-wrap text-white/80">
-                          {u.body}
+                          <Linkify text={u.body} />
                         </p>
                       ) : null}
                     </li>

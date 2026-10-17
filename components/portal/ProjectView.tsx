@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { Project, ProjectUpdate } from "@/lib/portal/projects";
 import { ProgressBar, STATUS_TEXT, StatusBadge, When } from "./status";
+import { Linkify } from "@/components/ui/Linkify";
 
 export function ProjectView({
   initial,
@@ -88,7 +89,7 @@ export function ProjectView({
           ))}
         </dl>
         <p className="mt-5 text-sm leading-relaxed whitespace-pre-wrap text-white/75">
-          {project.description}
+          <Linkify text={project.description} />
         </p>
       </section>
 
@@ -142,7 +143,7 @@ export function ProjectView({
                   ) : null}
                   {u.body ? (
                     <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-white/80">
-                      {u.body}
+                      <Linkify text={u.body} />
                     </p>
                   ) : null}
                 </div>

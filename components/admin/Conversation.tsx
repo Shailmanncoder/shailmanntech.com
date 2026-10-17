@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { adminFetch } from "./client";
 import { Button, Card } from "./ui";
+import { Linkify } from "@/components/ui/Linkify";
 type Item = {
   id: string;
   subject: string;
@@ -59,7 +60,7 @@ export function Conversation({ id }: { id: string }) {
                   · {new Date(m.at).toLocaleString()} · {m.subject}
                 </summary>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm text-white/75">
-                  {m.body}
+                  <Linkify text={m.body} />
                 </p>
               </details>
             </li>

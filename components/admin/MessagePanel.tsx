@@ -19,6 +19,8 @@ import {
   Sparkles,
   Star,
   Wand2,
+  Paperclip,
+  X,
 } from "lucide-react";
 import { ClientDetails } from "./WorkspacePanel";
 import { Conversation } from "./Conversation";
@@ -44,6 +46,17 @@ import {
   Skeleton,
   useToast,
 } from "./ui";
+import { Linkify } from "@/components/ui/Linkify";
+
+/** Matches what the server accepts for one reply. */
+const MAX_FILES = 5;
+const MAX_BYTES = 2 * 1024 * 1024;
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 const QUICK_TASKS = [
   "Thank them and suggest a short call this week",
@@ -56,9 +69,9 @@ function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null;
   return Boolean(
     el &&
-      (el.tagName === "INPUT" ||
-        el.tagName === "TEXTAREA" ||
-        el.isContentEditable),
+    (el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.isContentEditable),
   );
 }
 
@@ -100,6 +113,7 @@ export function MessagePanel({
   const [checking, setChecking] = useState(false);
   const [files, setFiles] = useState<ReplyAttachment[]>([]);
   const [readingFiles, setReadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -323,19 +337,26 @@ export function MessagePanel({
     setDrafting(false);
   }
 
+  /** Bytes in a base64 attachment. */
+  const sizeOf = (file: ReplyAttachment) =>
+    Math.floor((file.content.length * 3) / 4);
+
   async function pickFiles(list: FileList | null) {
-    if (!list) return;
+    if (!list?.length) return;
     const chosen = Array.from(list);
-    if (
-      chosen.length > 5 ||
-      chosen.reduce((n, f) => n + f.size, 0) > 2 * 1024 * 1024
-    ) {
-      toast({ tone: "error", text: "Choose up to five files, 2 MB total." });
+    const total =
+      files.reduce((n, f) => n + sizeOf(f), 0) +
+      chosen.reduce((n, f) => n + f.size, 0);
+    if (files.length + chosen.length > MAX_FILES || total > MAX_BYTES) {
+      toast({
+        tone: "error",
+        text: `Attach up to ${MAX_FILES} files, ${MAX_BYTES / 1024 / 1024} MB in total.`,
+      });
       return;
     }
     setReadingFiles(true);
     try {
-      const attachments = await Promise.all(
+      const added = await Promise.all(
         chosen.map(
           (file) =>
             new Promise<ReplyAttachment>((resolve, reject) => {
@@ -345,13 +366,13 @@ export function MessagePanel({
               reader.onload = () =>
                 resolve({
                   filename: file.name,
-                  content: String(reader.result).split(",")[1],
+                  content: String(reader.result).split(",")[1] ?? "",
                 });
               reader.readAsDataURL(file);
             }),
         ),
       );
-      setFiles(attachments);
+      setFiles((current) => [...current, ...added]);
     } catch {
       toast({ tone: "error", text: "Couldn't read the selected files." });
     } finally {
@@ -575,7 +596,9 @@ export function MessagePanel({
         ) : null}
 
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-5 text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-white/85 sm:px-6">
-          {message.body.trim() || (
+          {message.body.trim() ? (
+            <Linkify text={message.body.trim()} />
+          ) : (
             <span className="text-white/50">
               (This email has no text content.)
             </span>
@@ -640,7 +663,7 @@ export function MessagePanel({
                       You · {formatDate(r.sentAt, true)}
                     </p>
                     <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-white/80">
-                      {r.body}
+                      <Linkify text={r.body} />
                     </p>
                   </li>
                 ))}
@@ -820,30 +843,6 @@ export function MessagePanel({
             </div>
           ) : null}
 
-          <div className="space-y-2 border-t border-white/10 p-4">
-            <label className="block text-sm">
-              Attach files (up to 5, 2 MB total)
-              <input
-                type="file"
-                multiple
-                disabled={sending || readingFiles}
-                onChange={(e) => pickFiles(e.target.files)}
-                className="mt-2 block w-full text-sm"
-              />
-            </label>
-            {files.length ? (
-              <div className="text-sm text-white/70">
-                {files.map((f) => f.filename).join(", ")}{" "}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setFiles([])}
-                >
-                  Remove attachments
-                </Button>
-              </div>
-            ) : null}
-          </div>
           <div className="relative border-t border-white/[0.06]">
             <textarea
               ref={replyRef}
@@ -875,8 +874,72 @@ export function MessagePanel({
             ) : null}
           </div>
 
+          {files.length ? (
+            <ul
+              aria-label="Attachments"
+              className="flex flex-wrap gap-2 border-t border-white/[0.06] px-5 py-3"
+            >
+              {files.map((file, index) => (
+                <li
+                  key={`${index}-${file.filename}`}
+                  className="flex max-w-full items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pr-1.5 pl-3 text-sm"
+                >
+                  <Paperclip
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-white/50"
+                  />
+                  <span className="min-w-0 truncate text-white/85">
+                    {file.filename}
+                  </span>
+                  <span className="shrink-0 text-xs text-white/50">
+                    {formatBytes(sizeOf(file))}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFiles((current) =>
+                        current.filter((_, i) => i !== index),
+                      )
+                    }
+                    disabled={sending}
+                    aria-label={`Remove ${file.filename}`}
+                    className="rounded-md p-1 text-white/50 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <X aria-hidden="true" className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-3">
-            <p className="hidden items-center gap-1.5 text-xs text-white/50 sm:flex">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => {
+                pickFiles(e.target.files);
+                e.target.value = ""; // allow picking the same file again
+              }}
+            />
+            <Button
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || readingFiles || files.length >= MAX_FILES}
+              title={`Up to ${MAX_FILES} files, ${MAX_BYTES / 1024 / 1024} MB in total`}
+            >
+              {readingFiles ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                />
+              ) : (
+                <Paperclip aria-hidden="true" className="size-4" />
+              )}
+              Attach files
+            </Button>
+            <p className="hidden items-center gap-1.5 text-xs text-white/50 lg:flex">
               <Kbd>⌘</Kbd>
               <Kbd>Enter</Kbd>
               to send · original email quoted below
