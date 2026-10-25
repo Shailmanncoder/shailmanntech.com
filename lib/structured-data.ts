@@ -122,6 +122,7 @@ export const founderProfileSchema = {
     name: "Shailmann",
     url: `${site.url}/founder`,
     jobTitle: "Founder",
+    image: `${site.url}/images/shailmann-founder.jpeg`,
     description: "Shailmann is the founder of Shailmann Tech, a technology studio focused on modern digital products and engineering solutions.",
     worksFor: { "@id": `${site.url}/#organization` },
     mainEntityOfPage: { "@id": `${site.url}/founder#profile` },

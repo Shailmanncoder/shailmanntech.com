@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { site } from "@/lib/site";
 import { breadcrumbSchema, founderProfileSchema, jsonLd } from "@/lib/structured-data";
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/founder" },
-  openGraph: { title, description, url: `${site.url}/founder`, type: "profile", siteName: site.name },
-  twitter: { card: "summary", title, description },
+  openGraph: { title, description, url: `${site.url}/founder`, type: "profile", siteName: site.name, images: [{ url: founderProfileSchema.mainEntity.image, width: 1145, height: 1374, alt: "Shailmann, founder of Shailmann Tech" }] },
+  twitter: { card: "summary_large_image", title, description, images: [{ url: founderProfileSchema.mainEntity.image, alt: "Shailmann, founder of Shailmann Tech" }] },
 };
 
 export default function FounderPage() {
@@ -40,14 +41,17 @@ export default function FounderPage() {
               </div>
             </div>
             <figure className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-linear-to-br from-brand-indigo/15 via-surface to-canvas-raised p-8 sm:p-10">
-              <div aria-hidden="true" className="absolute -top-16 -right-16 size-64 rounded-full border border-brand-cyan/15" />
-              <div aria-hidden="true" className="absolute -top-8 -right-8 size-64 rounded-full border border-brand-violet/20" />
-              <div className="relative flex aspect-square items-center justify-center rounded-full border border-white/10 bg-white/[0.02]">
-                <span aria-hidden="true" className="text-[9rem] leading-none font-light tracking-tighter text-white/85 sm:text-[12rem]">S<span className="text-brand-cyan">.</span></span>
-              </div>
+              <Image
+                src="/images/shailmann-founder.jpeg"
+                alt="Shailmann, founder of Shailmann Tech"
+                width={1145}
+                height={1374}
+                sizes="(min-width: 1024px) 420px, (min-width: 640px) 560px, 100vw"
+                preload
+                className="relative h-auto w-full rounded-2xl"
+              />
               <figcaption className="relative mt-8 flex flex-wrap items-end justify-between gap-4 border-t border-white/10 pt-6">
                 <div><p className="text-lg font-medium">Shailmann</p><p className="mt-1 text-sm text-white/60">Founder · Shailmann Tech</p></div>
-                <span className="font-mono text-[0.65rem] tracking-widest text-white/55 uppercase">Portrait placeholder</span>
               </figcaption>
             </figure>
           </div>
