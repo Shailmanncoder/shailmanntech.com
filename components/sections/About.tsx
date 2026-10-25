@@ -30,7 +30,7 @@ export function About() {
 
           <Reveal delay={0.12}>
             <p className="mt-7 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-              Shailmann Tech is a technology studio focused on building modern
+              Founded by Shailmann, Shailmann Tech is a technology studio focused on building modern
               digital products and engineering solutions. From polished user
               interfaces to production infrastructure, we work across the
               technology stack to turn ideas into reliable digital experiences.
@@ -42,8 +42,8 @@ export function About() {
               <ActionButton href="/about" variant="secondary" arrow="right">
                 More about us
               </ActionButton>
-              <ActionButton href="/services" variant="ghost" arrow="right">
-                Our services
+              <ActionButton href="/founder" variant="ghost" arrow="right">
+                Meet Shailmann
               </ActionButton>
             </div>
           </Reveal>

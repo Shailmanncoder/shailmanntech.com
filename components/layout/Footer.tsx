@@ -8,7 +8,8 @@ type FooterLink = { label: string; href: string };
 const columns: { heading: string; links: FooterLink[] }[] = [
   {
     heading: "Navigation",
-    links: navItems.map((item) => ({ label: item.label, href: item.href })),
+    links: [...navItems.map((item) => ({ label: item.label, href: item.href })),
+      { label: "Shailmann · Founder", href: "/founder" }],
   },
   {
     heading: "Products",

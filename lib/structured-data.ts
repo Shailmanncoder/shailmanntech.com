@@ -11,6 +11,7 @@ export const organizationSchema = {
   alternateName: "ShailmannTech",
   url: site.url,
   logo,
+  founder: { "@id": `${site.url}/founder#person`, "@type": "Person", name: "Shailmann", url: `${site.url}/founder` },
   image: logo,
   description: site.description,
   email: site.email,
@@ -107,3 +108,22 @@ export function breadcrumbSchema(trail: { name: string; path: string }[]) {
 /** Serialises schema objects for a single <script type="application/ld+json">. */
 export const jsonLd = (data: unknown) =>
   JSON.stringify(data).replace(/</g, "\\u003c");
+
+export const founderProfileSchema = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  "@id": `${site.url}/founder#profile`,
+  url: `${site.url}/founder`,
+  name: "Shailmann — Founder of Shailmann Tech",
+  isPartOf: { "@id": `${site.url}/#website` },
+  mainEntity: {
+    "@type": "Person",
+    "@id": `${site.url}/founder#person`,
+    name: "Shailmann",
+    url: `${site.url}/founder`,
+    jobTitle: "Founder",
+    description: "Shailmann is the founder of Shailmann Tech, a technology studio focused on modern digital products and engineering solutions.",
+    worksFor: { "@id": `${site.url}/#organization` },
+    mainEntityOfPage: { "@id": `${site.url}/founder#profile` },
+  },
+} as const;

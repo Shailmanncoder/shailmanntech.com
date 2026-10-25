@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { principles, technologies } from "@/lib/content";
 import { site } from "@/lib/site";
@@ -55,6 +56,15 @@ export default function AboutPage() {
         }
         description="Shailmann Tech is a technology studio focused on building modern digital products and engineering solutions. From polished user interfaces to production infrastructure, we work across the technology stack to turn ideas into reliable digital experiences."
       />
+
+      <div className="container-page pb-14">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 sm:p-10">
+          <p className="font-mono text-xs tracking-widest text-brand-cyan uppercase">Our founder</p>
+          <h2 className="mt-3 text-3xl font-semibold">Founded by Shailmann.</h2>
+          <p className="mt-4 max-w-2xl leading-relaxed text-white/65">Shailmann is the founder of Shailmann Tech, the studio behind the digital products and engineering services featured on this website.</p>
+          <Link href="/founder" className="mt-6 inline-block text-brand-cyan underline underline-offset-4">Meet Shailmann →</Link>
+        </div>
+      </div>
 
       <Section divider aria-labelledby="approach-heading">
         <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
