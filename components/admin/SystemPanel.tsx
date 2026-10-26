@@ -108,6 +108,10 @@ function describeEvent(event: AuditEvent) {
       return `Imported ${String(d.imported)} new ${d.imported === 1 ? "email" : "emails"}`;
     case "errors_resolved":
       return "Cleared errors";
+    case "sender_blocked":
+      return `Blocked ${event.target ?? "a sender"}`;
+    case "sender_unblocked":
+      return `Unblocked ${event.target ?? "a sender"}`;
     default:
       return event.action;
   }

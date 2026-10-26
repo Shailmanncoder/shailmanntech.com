@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const deliver = vi.fn(async () => ({ status: "sent" as const }));
 vi.mock("@/lib/contact-delivery", () => ({ deliverContactRequest: deliver }));
+const blocked = vi.fn(async (email: string) => email === "pest@example.com");
+vi.mock("@/lib/admin/blocked", () => ({ isBlockedSender: blocked }));
 
 const { POST } = await import("@/app/api/contact/route");
 const { resetMemoryLimits } = await import("@/lib/rate-limit");
@@ -88,6 +90,15 @@ describe("contact form bot check", () => {
   it("silently drops honeypot submissions", async () => {
     const response = await submit({ website: "http://spam.example" });
     expect(response.status).toBe(200);
+    expect(deliver).not.toHaveBeenCalled();
+  });
+});
+
+describe("contact form and blocked senders", () => {
+  it("thanks a blocked sender as usual but sends nothing", async () => {
+    const response = await submit({ email: "pest@example.com" });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
     expect(deliver).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import {
   senderAddress,
   sendViaResend,
 } from "@/lib/contact-delivery";
+import { isBlockedSender } from "@/lib/admin/blocked";
 import { reportError } from "@/lib/errors";
 import { site } from "@/lib/site";
 import { CODE_MINUTES, type CodePurpose } from "./auth";
@@ -28,6 +29,8 @@ async function send(email: Record<string, unknown>, key?: string) {
 }
 
 export async function sendCode(to: string, code: string, purpose: CodePurpose) {
+  // A blocked sender never gets a code, so can't sign up or reset a password.
+  if (await isBlockedSender(to)) return;
   const what =
     purpose === "verify" ? "confirm your email address" : "reset your password";
   await send({

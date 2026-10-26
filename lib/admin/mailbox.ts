@@ -124,6 +124,8 @@ export type SyncResult = {
   remaining: number;
   /** Emails filed as automated in this batch. */
   automated: number;
+  /** Emails from blocked senders, filed in Blocked. */
+  blocked: number;
 };
 
 export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
@@ -165,6 +167,7 @@ export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
       const batch = pending.slice(0, BATCH_SIZE);
       let imported = 0;
       let automated = 0;
+      let blocked = 0;
 
       if (batch.length) {
         for await (const message of client.fetch(
@@ -206,19 +209,22 @@ export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
             insert into admin_messages (
               uidvalidity, uid, message_id, from_name, from_email,
               contact_name, contact_email, subject, body, source, received_at,
-              automated, automated_reason, classified, mailbox, direction, attachments, status
+              automated, automated_reason, classified, mailbox, direction, attachments, status,
+              blocked
             ) values (
               ${uidValidity}, ${message.uid}, ${parsed.messageId ?? null},
               ${from.name}, ${from.email}, ${contactName}, ${contactEmail},
               ${parsed.subject ?? ""}, ${body}, ${source}, ${receivedAt},
-              ${reason !== null}, ${reason}, true, ${MAILBOX}, ${outgoing ? "outgoing" : "incoming"}, ${sql.json(attachments)}, ${outgoing ? "replied" : "new"}
+              ${reason !== null}, ${reason}, true, ${MAILBOX}, ${outgoing ? "outgoing" : "incoming"}, ${sql.json(attachments)}, ${outgoing ? "replied" : "new"},
+              is_blocked_sender(${contactEmail})
             )
             on conflict (mailbox, uidvalidity, uid) do nothing
-            returning id`;
+            returning id, blocked`;
           if (!rows.length)
             await sql`update admin_messages set attachments=${sql.json(attachments)} where mailbox=${MAILBOX} and uidvalidity=${uidValidity} and uid=${message.uid}`;
           imported += rows.length;
-          if (rows.length && reason) automated++;
+          if (rows.length && rows[0].blocked) blocked++;
+          else if (rows.length && reason) automated++;
           // A website form request was already checked and announced when it
           // was submitted: carry that over instead of checking it again.
           if (rows.length && source === "form" && !outgoing) {
@@ -325,6 +331,7 @@ export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
         imported,
         remaining: pending.length - batch.length + stillUnchecked,
         automated,
+        blocked,
       };
     } finally {
       lock.release();

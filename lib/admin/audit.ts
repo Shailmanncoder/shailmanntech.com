@@ -19,7 +19,9 @@ export type AuditAction =
   | "export_downloaded"
   | "mail_synced"
   | "errors_resolved"
-  | "project_updated";
+  | "project_updated"
+  | "sender_blocked"
+  | "sender_unblocked";
 
 export async function logEvent(
   action: AuditAction,

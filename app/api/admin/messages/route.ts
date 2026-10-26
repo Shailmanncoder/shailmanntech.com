@@ -13,6 +13,7 @@ const FILTERS: InboxFilter[] = [
   "replied",
   "archived",
   "automated",
+  "blocked",
 ];
 
 export const GET = adminRoute(async (request: Request) => {

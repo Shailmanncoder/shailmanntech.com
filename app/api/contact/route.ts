@@ -4,6 +4,7 @@ import {
   type ContactPayload,
   type ContactResponse,
 } from "@/lib/contact";
+import { isBlockedSender } from "@/lib/admin/blocked";
 import { intake } from "@/lib/intake";
 import { site } from "@/lib/site";
 import { reportError } from "@/lib/errors";
@@ -64,6 +65,11 @@ export async function POST(request: Request) {
       { ok: false, code: "invalid", errors },
       { status: 422 },
     );
+  }
+
+  // Blocked senders see the usual thank-you, but nothing is sent or saved.
+  if (await isBlockedSender(payload.email)) {
+    return NextResponse.json<ContactResponse>({ ok: true });
   }
 
   const ip =

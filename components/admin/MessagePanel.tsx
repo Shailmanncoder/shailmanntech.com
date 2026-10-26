@@ -3,6 +3,7 @@
 import {
   Archive,
   ArchiveRestore,
+  Ban,
   Bot,
   UserRound,
   CheckCheck,
@@ -23,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { ClientDetails } from "./WorkspacePanel";
+import { BlockDialog } from "./BlockSender";
 import { Conversation } from "./Conversation";
 import type { ReplyAttachment } from "@/lib/admin/workspace-validation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -111,6 +113,7 @@ export function MessagePanel({
     reason: string;
   } | null>(null);
   const [checking, setChecking] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const [files, setFiles] = useState<ReplyAttachment[]>([]);
   const [readingFiles, setReadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +142,7 @@ export function MessagePanel({
           aiReady &&
           m.direction !== "outgoing" &&
           !m.automated &&
+          !m.blocked &&
           m.status !== "replied" &&
           !m.fit
         ) {
@@ -248,6 +252,29 @@ export function MessagePanel({
     });
     onArchived();
   }, [id, message, onArchived, onChanged, patch, toast]);
+
+  const unblock = useCallback(async () => {
+    if (!message) return;
+    try {
+      const data = await adminFetch<{ pattern: string; messages: number }>(
+        "/api/admin/blocked",
+        { method: "DELETE", body: { email: message.contactEmail } },
+      );
+      setMessage((current) =>
+        current ? { ...current, blocked: false } : current,
+      );
+      onChanged();
+      toast({
+        tone: "ok",
+        text: `Unblocked ${data.pattern}. ${data.messages} ${data.messages === 1 ? "email" : "emails"} back in your inbox.`,
+      });
+    } catch (e) {
+      toast({
+        tone: "error",
+        text: e instanceof Error ? e.message : "Couldn't unblock.",
+      });
+    }
+  }, [message, onChanged, toast]);
 
   const toggleStar = useCallback(() => {
     if (message) patch({ starred: !message.starred });
@@ -495,6 +522,18 @@ export function MessagePanel({
               <Bot aria-hidden="true" className="size-4" />
             )}
           </IconButton>
+          {message.direction !== "outgoing" ? (
+            <IconButton
+              label={message.blocked ? "Unblock sender" : "Block sender"}
+              onClick={message.blocked ? unblock : () => setBlocking(true)}
+              active={message.blocked}
+            >
+              <Ban
+                aria-hidden="true"
+                className={cn("size-4", message.blocked && "text-red-300")}
+              />
+            </IconButton>
+          ) : null}
           <IconButton
             label="Mark unread (u)"
             onClick={() => patch({ status: "new" })}
@@ -527,6 +566,12 @@ export function MessagePanel({
               </Badge>
             ) : null}
             {message.archived ? <Badge tone="neutral">Archived</Badge> : null}
+            {message.blocked ? (
+              <Badge tone="neutral">
+                <Ban aria-hidden="true" className="size-3 text-red-300" />{" "}
+                Blocked
+              </Badge>
+            ) : null}
             {message.automated ? (
               <Badge tone="neutral">
                 <Bot aria-hidden="true" className="size-3" /> Automated
@@ -575,7 +620,19 @@ export function MessagePanel({
           </div>
         </header>
 
-        {message.automated ? (
+        {message.blocked ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3 text-sm">
+            <Ban aria-hidden="true" className="size-4 shrink-0 text-red-300" />
+            <p className="min-w-0 flex-1 text-white/70">
+              This sender is blocked. Their emails stay out of your inbox,
+              alerts and AI, and they can&rsquo;t use the contact form or client
+              portal.
+            </p>
+            <Button size="sm" onClick={unblock}>
+              Unblock
+            </Button>
+          </div>
+        ) : message.automated ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm">
             <Bot aria-hidden="true" className="size-4 shrink-0 text-white/50" />
             <p className="min-w-0 flex-1 text-white/65">
@@ -744,7 +801,7 @@ export function MessagePanel({
             </p>
           </div>
 
-          {aiReady && !message.automated ? (
+          {aiReady && !message.automated && !message.blocked ? (
             <div className="border-t border-white/[0.06] px-5 py-4">
               {checking ? (
                 <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5">
@@ -990,6 +1047,19 @@ export function MessagePanel({
         confirmLabel="Send reply"
         onConfirm={send}
         onCancel={() => setConfirming(false)}
+      />
+      <BlockDialog
+        open={blocking}
+        email={message.contactEmail}
+        name={message.contactName}
+        onClose={() => setBlocking(false)}
+        onBlocked={() => {
+          setMessage((current) =>
+            current ? { ...current, blocked: true } : current,
+          );
+          onChanged();
+          onArchived();
+        }}
       />
     </article>
   );

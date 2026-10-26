@@ -26,6 +26,8 @@ export type MessageSummary = {
   starred: boolean;
   automated: boolean;
   automatedReason: string | null;
+  /** From a blocked sender: filed in Blocked, out of everything else. */
+  blocked: boolean;
   /** AI project-fit decision, once checked. */
   fit: FitDecision | null;
 };
@@ -60,7 +62,8 @@ export type InboxFilter =
   | "starred"
   | "replied"
   | "archived"
-  | "automated";
+  | "automated"
+  | "blocked";
 
 type Row = {
   id: string;
@@ -75,6 +78,7 @@ type Row = {
   starred: boolean;
   automated: boolean;
   automated_reason: string | null;
+  blocked: boolean;
   fit: FitDecision | null;
 };
 
@@ -92,6 +96,7 @@ function toSummary(row: Row): MessageSummary {
     starred: row.starred,
     automated: row.automated,
     automatedReason: row.automated_reason,
+    blocked: row.blocked,
     fit: row.fit,
   };
 }
@@ -105,20 +110,22 @@ export async function listMessages(
   const sql = await db();
   const term = search.trim() ? `%${search.trim()}%` : null;
 
+  // Blocked senders' mail only ever shows in Blocked.
   const where = {
-    all: sql`true`,
-    awaiting: sql`not automated and not archived and direction = 'incoming' and status <> 'replied'`,
-    form: sql`not automated and not archived and source = 'form'`,
-    starred: sql`starred`,
-    replied: sql`not automated and status = 'replied'`,
-    archived: sql`not automated and archived`,
-    automated: sql`automated`,
+    all: sql`not blocked`,
+    awaiting: sql`not blocked and not automated and not archived and direction = 'incoming' and status <> 'replied'`,
+    form: sql`not blocked and not automated and not archived and source = 'form'`,
+    starred: sql`not blocked and starred`,
+    replied: sql`not blocked and not automated and status = 'replied'`,
+    archived: sql`not blocked and not automated and archived`,
+    automated: sql`not blocked and automated`,
+    blocked: sql`blocked`,
   }[filter];
 
   const rows = await sql<Row[]>`
     select id, contact_name, contact_email, subject, left(body, 400) as body,
            source, received_at, status, archived, starred,
-           automated, automated_reason, fit
+           automated, automated_reason, blocked, fit
     from admin_messages
     where ${where}
     ${mailbox ? sql`and mailbox = ${mailbox}` : sql``}
@@ -363,6 +370,7 @@ export type InboxStats = {
     form: number;
     starred: number;
     automated: number;
+    blocked: number;
     /** Unresolved entries on the System page. */
     errors: number;
   };
@@ -392,7 +400,7 @@ export async function getStats(): Promise<InboxStats> {
       count(*) filter (where not archived and direction = 'incoming' and status <> 'replied')::int as awaiting,
       count(*) filter (where status = 'replied')::int as replied
     from admin_messages
-    where not automated and direction = 'incoming'`;
+    where not automated and not blocked and direction = 'incoming'`;
 
   const [speed] = await sql<{ hours: number | null }[]>`
     select percentile_cont(0.5) within group (
@@ -402,7 +410,7 @@ export async function getStats(): Promise<InboxStats> {
     join (select message_id, min(sent_at) as first_reply
           from admin_replies where status = 'sent' group by message_id) r
       on r.message_id = m.id
-    where not m.automated`;
+    where not m.automated and not m.blocked`;
 
   const monthly = await sql<{ month: Date; form: number; email: number }[]>`
     select months.month,
@@ -415,7 +423,7 @@ export async function getStats(): Promise<InboxStats> {
     ) as months(month)
     left join admin_messages m
       on date_trunc('month', m.received_at) = months.month
-      and not m.automated and m.direction = 'incoming'
+      and not m.automated and not m.blocked and m.direction = 'incoming'
     group by months.month
     order by months.month`;
 
@@ -429,6 +437,7 @@ export async function getStats(): Promise<InboxStats> {
       form: number;
       starred: number;
       automated: number;
+      blocked: number;
       errors: number;
     }[]
   >`
@@ -438,15 +447,16 @@ export async function getStats(): Promise<InboxStats> {
       count(*) filter (where not automated and not archived and source = 'form')::int as form,
       count(*) filter (where starred)::int as starred,
       count(*) filter (where automated)::int as automated,
+      (select count(*)::int from admin_messages where blocked) as blocked,
       (select count(*)::int from app_errors where not resolved) as errors
-    from admin_messages`;
+    from admin_messages where not blocked`;
 
   const needsReply = await sql<Row[]>`
     select id, contact_name, contact_email, subject, left(body, 400) as body,
            source, received_at, status, archived, starred,
-           automated, automated_reason, fit
+           automated, automated_reason, blocked, fit
     from admin_messages
-    where not automated and not archived and direction = 'incoming' and status <> 'replied'
+    where not automated and not blocked and not archived and direction = 'incoming' and status <> 'replied'
       and received_at >= now() - interval '30 days'
     order by received_at asc
     limit 5`;
@@ -455,7 +465,7 @@ export async function getStats(): Promise<InboxStats> {
   const topServices = await sql<{ service: string; count: number }[]>`
     select trim(split_part(subject, '—', 2)) as service, count(*)::int as count
     from admin_messages
-    where source = 'form' and position('—' in subject) > 0
+    where source = 'form' and not blocked and position('—' in subject) > 0
       and received_at >= now() - interval '12 months'
     group by 1
     order by count desc, service
@@ -486,8 +496,8 @@ export async function recentForAssistant(limit = 150) {
   const rows = await sql<Row[]>`
     select id, contact_name, contact_email, subject, left(body, 500) as body,
            source, received_at, status, archived, starred,
-           automated, automated_reason, fit
-    from admin_messages where not automated
+           automated, automated_reason, blocked, fit
+    from admin_messages where not automated and not blocked
     order by received_at desc limit ${limit}`;
   return rows.map(toSummary);
 }
@@ -496,6 +506,6 @@ export async function exportAll() {
   const sql = await db();
   return sql<Row[]>`
     select id, contact_name, contact_email, subject, body, source,
-           received_at, status, archived, starred, automated, automated_reason, fit
+           received_at, status, archived, starred, automated, automated_reason, blocked, fit
     from admin_messages order by received_at desc`;
 }

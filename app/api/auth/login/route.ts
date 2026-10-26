@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isBlockedSender } from "@/lib/admin/blocked";
 import { db } from "@/lib/admin/db";
 import { clearHits, countHits, recordHit } from "@/lib/rate-limit";
 import {
@@ -41,7 +42,8 @@ export const POST = portalRoute(async (request: Request) => {
     select id, password_hash, email_verified_at is not null as verified
     from clients where email = ${email}`;
   const valid = await verifyPassword(password, client?.password_hash ?? null);
-  if (!client || !valid) {
+  // A blocked sender gets the same answer as a wrong password.
+  if (!client || !valid || (await isBlockedSender(email))) {
     for (const key of keys) await recordHit(key);
     return fail(
       client && !client.password_hash

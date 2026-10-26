@@ -5,6 +5,7 @@ import {
   Activity,
   AlertTriangle,
   Archive,
+  Ban,
   Bot,
   CheckCheck,
   Clock,
@@ -51,6 +52,7 @@ import { RulesPanel } from "./RulesPanel";
 import { ProjectsPanel } from "./ProjectsPanel";
 import { WorkspacePanel, type Lead } from "./WorkspacePanel";
 import { SystemPanel } from "./SystemPanel";
+import { BlockedListDialog } from "./BlockSender";
 import {
   Avatar,
   Badge,
@@ -88,7 +90,13 @@ const FOLDERS: {
   { key: "replied", label: "Replied", icon: CheckCheck },
   { key: "archived", label: "Archived", icon: Archive },
   { key: "automated", label: "Automated", icon: Bot },
+  { key: "blocked", label: "Blocked", icon: Ban, count: "blocked" },
 ];
+
+/** How often the open admin checks the mailbox for new mail. */
+const AUTO_SYNC_MS = 30_000;
+/** Coming back to the tab checks again, but not more often than this. */
+const AUTO_SYNC_MIN_GAP_MS = 10_000;
 
 const SETUP_LABELS: Record<keyof Setup, string> = {
   database: "database (DATABASE_URL)",
@@ -172,7 +180,9 @@ function AdminShell({ setup }: { setup: Setup }) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const shortcutsRef = useRef<HTMLDivElement>(null);
   useModalFocus(showShortcuts, shortcutsRef);
+  const [showBlocked, setShowBlocked] = useState(false);
   const syncing = useRef(false);
+  const lastSync = useRef(0);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const isPage =
@@ -257,12 +267,18 @@ function AdminShell({ setup }: { setup: Setup }) {
     loadStats();
   }, [loadMessages, loadStats]);
 
-  const runSync = useCallback(async () => {
+  /**
+   * Imports new mail. A quiet sync (the automatic background check) shows no
+   * progress or errors, and only refreshes the list when something arrived.
+   */
+  const runSync = useCallback(async (quiet = false) => {
     if (!setup.database || !setup.mailbox || syncing.current) return;
     syncing.current = true;
-    setSync({ running: true, imported: 0, error: "" });
+    lastSync.current = Date.now();
+    if (!quiet) setSync({ running: true, imported: 0, error: "" });
     let imported = 0;
     let automated = 0;
+    let blocked = 0;
     try {
       // Each call imports a batch; keep going until the mailbox is caught up.
       for (let round = 0; round < 80; round++) {
@@ -270,42 +286,76 @@ function AdminShell({ setup }: { setup: Setup }) {
           imported: number;
           remaining: number;
           automated: number;
+          blocked?: number;
         }>("/api/admin/sync", {
           method: "POST",
-          body: { mailbox: mailbox || "INBOX" },
+          body: { mailbox: quiet ? "INBOX" : mailbox || "INBOX" },
         });
         imported += result.imported;
         automated += result.automated;
-        setSync({ running: true, imported, error: "" });
+        blocked += result.blocked ?? 0;
+        if (!quiet) setSync({ running: true, imported, error: "" });
         if (result.remaining === 0) break;
       }
-      setSync({ running: false, imported, error: "" });
-      // New automated mail is filed quietly; only people's emails are news.
-      const people = Math.max(0, imported - automated);
+      if (!quiet || imported > 0) setSync({ running: false, imported, error: "" });
+      // Automated and blocked mail is filed quietly; only people's emails are news.
+      const people = Math.max(0, imported - automated - blocked);
       if (people > 0) {
         toast({
           tone: "ok",
           text: `${people} new ${people === 1 ? "email" : "emails"}.`,
         });
-      } else if (automated > 0 && imported === 0) {
+      } else if (!quiet && automated > 0 && imported === 0) {
         toast({
           tone: "ok",
           text: `Filed ${automated} automated ${automated === 1 ? "email" : "emails"} away from your inbox.`,
         });
       }
     } catch (e) {
-      setSync({
-        running: false,
-        imported,
-        error: e instanceof Error ? e.message : "Sync failed.",
-      });
+      // A background check that fails is retried on the next one.
+      if (!quiet)
+        setSync({
+          running: false,
+          imported,
+          error: e instanceof Error ? e.message : "Sync failed.",
+        });
     }
     syncing.current = false;
-    refresh();
+    if (!quiet || imported > 0) refresh();
   }, [refresh, setup.database, setup.mailbox, toast, mailbox]);
 
+  // Unread count in the browser tab, so new mail is visible from other tabs.
+  const unread = stats?.counts.unread ?? 0;
   useEffect(() => {
-    // Sync once when the admin opens; later syncs are manual.
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [unread]);
+
+  // New mail shows up on its own: check every 30 seconds while the admin is
+  // open and visible, and straight away when you come back to the tab.
+  const runSyncRef = useRef(runSync);
+  useEffect(() => {
+    runSyncRef.current = runSync;
+  }, [runSync]);
+  useEffect(() => {
+    if (!setup.database || !setup.mailbox) return;
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastSync.current < AUTO_SYNC_MIN_GAP_MS) return;
+      runSyncRef.current(true);
+    };
+    const timer = setInterval(check, AUTO_SYNC_MS);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [setup.database, setup.mailbox]);
+
+  useEffect(() => {
+    // Sync when the admin opens; after that the background check takes over.
     const start = setTimeout(() => {
       loadStats();
       runSync();
@@ -518,7 +568,7 @@ function AdminShell({ setup }: { setup: Setup }) {
               </span>
               <IconButton
                 label="Sync mailbox"
-                onClick={runSync}
+                onClick={() => runSync()}
                 disabled={sync.running || !setup.mailbox || !setup.database}
                 className="size-7"
               >
@@ -563,7 +613,7 @@ function AdminShell({ setup }: { setup: Setup }) {
           </span>
           <IconButton
             label="Sync mailbox"
-            onClick={runSync}
+            onClick={() => runSync()}
             disabled={sync.running || !setup.mailbox || !setup.database}
           >
             <RefreshCw
@@ -648,6 +698,21 @@ function AdminShell({ setup }: { setup: Setup }) {
                     {messages ? `${messages.length}${hasMore ? "+" : ""}` : ""}
                   </span>
                 </div>
+                {folder === "blocked" ? (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-xs text-white/55">
+                      Mail from people you&rsquo;ve blocked. They aren&rsquo;t
+                      told.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowBlocked(true)}
+                      className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-white/80 hover:border-white/20 hover:text-white"
+                    >
+                      Manage list
+                    </button>
+                  </div>
+                ) : null}
                 <label className="mt-3 block text-xs text-white/70">
                   Mailbox folder
                   <select
@@ -764,7 +829,9 @@ function AdminShell({ setup }: { setup: Setup }) {
                           ? "Importing your mailbox…"
                           : folder === "awaiting"
                             ? "All caught up"
-                            : "Nothing here"
+                            : folder === "blocked"
+                              ? "No blocked mail"
+                              : "Nothing here"
                     }
                     body={
                       search
@@ -773,7 +840,9 @@ function AdminShell({ setup }: { setup: Setup }) {
                           ? "This can take a minute the first time."
                           : folder === "awaiting"
                             ? "Every email has a reply."
-                            : "Emails will show up here."
+                            : folder === "blocked"
+                              ? "Open an email and use the block button to block its sender."
+                              : "Emails will show up here."
                     }
                   />
                 ) : (
@@ -935,6 +1004,11 @@ function AdminShell({ setup }: { setup: Setup }) {
           </motion.div>
         ) : null}
       </AnimatePresence>
+      <BlockedListDialog
+        open={showBlocked}
+        onClose={() => setShowBlocked(false)}
+        onChanged={refresh}
+      />
     </div>
   );
 }

@@ -169,7 +169,8 @@ export async function clientFromToken(
     select c.id, c.email, c.name, c.password_hash, c.google_sub
     from client_sessions s join clients c on c.id = s.client_id
     where s.token_hash = ${sha256(token)} and s.revoked_at is null
-      and s.expires_at > now() and c.email_verified_at is not null`;
+      and s.expires_at > now() and c.email_verified_at is not null
+      and not is_blocked_sender(c.email)`;
   if (!row) return null;
   return {
     id: String(row.id),

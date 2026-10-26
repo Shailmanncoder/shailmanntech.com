@@ -49,6 +49,7 @@ export async function checkFormLead(
         starred: false,
         automated: false,
         automatedReason: null,
+        blocked: false,
         fit: null,
         fromName: payload.name,
         fromEmail: payload.email,
@@ -111,7 +112,7 @@ export async function checkNewInboxLeads(limit = 5) {
   const pending = await sql<{ id: string }[]>`
     select id from admin_messages
     where source = 'email' and direction = 'incoming' and mailbox = 'INBOX'
-      and not automated and not archived
+      and not automated and not blocked and not archived
       and status = 'new' and fit is null and alerted_at is null
       and received_at > now() - make_interval(hours => ${LOOKBACK_HOURS})
     order by received_at

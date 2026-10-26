@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isBlockedSender } from "@/lib/admin/blocked";
 import { adminDbConfigured, db } from "@/lib/admin/db";
 import { reportError } from "@/lib/errors";
 import { startSession } from "@/lib/portal/auth";
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
 
   try {
     const profile = await finishGoogleSignIn(url.origin, code, verifier);
+    if (await isBlockedSender(profile.email)) return back("google_failed");
     const sql = await db();
     // Same Google account, or an existing account with that (Google-verified)
     // email: link them. Otherwise create a new, already-verified account.
