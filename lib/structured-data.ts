@@ -1,7 +1,7 @@
 import { products, services } from "./content";
 import { site } from "./site";
 
-const logo = `${site.url}/icon.svg`;
+const logo = `${site.url}/brand/logo-mark.png`;
 
 export const organizationSchema = {
   "@context": "https://schema.org",

@@ -1,53 +1,20 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { site } from "@/lib/site";
 
-/**
- * The Shailmann Tech mark: a terminal prompt set in the brand gradient — a nod
- * to the "shell" in Shailmann and to the engineering work underneath the brand.
- */
+/** The Shailmann Tech mark: a folded-ribbon "S" in the brand blues. */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 32 32"
+    <Image
+      src="/brand/logo-mark.png"
+      alt=""
       aria-hidden="true"
-      focusable="false"
-      className={cn("size-8 shrink-0", className)}
-    >
-      <defs>
-        <linearGradient id="shailmann-mark" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#22d3ee" />
-          <stop offset="52%" stopColor="#4c7dff" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#shailmann-mark)" />
-      <rect
-        x="0.6"
-        y="0.6"
-        width="30.8"
-        height="30.8"
-        rx="8.6"
-        fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.25"
-      />
-      <path
-        d="M10.5 11.5 15 16l-4.5 4.5"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M17 20.5h5"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-    </svg>
+      width={64}
+      height={64}
+      priority
+      className={cn("size-8 shrink-0 object-contain", className)}
+    />
   );
 }
 

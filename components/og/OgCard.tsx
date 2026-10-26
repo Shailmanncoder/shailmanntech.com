@@ -1,3 +1,4 @@
+import { LOGO_MARK_DATA_URI } from "./logo-mark";
 import { site } from "@/lib/site";
 
 export const ogSize = { width: 1200, height: 630 };
@@ -33,22 +34,8 @@ export function OgCard({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background:
-              "linear-gradient(135deg, #22d3ee, #4c7dff 52%, #8b5cf6)",
-            fontSize: 30,
-            fontWeight: 700,
-          }}
-        >
-          &gt;
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- rendered to an image, not a page */}
+        <img src={LOGO_MARK_DATA_URI} width={56} height={56} alt="" />
         <div
           style={{ display: "flex", fontSize: 28, letterSpacing: "-0.02em" }}
         >
