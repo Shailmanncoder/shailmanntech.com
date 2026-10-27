@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notify } from "@/lib/notifications";
 import { notifyTeamOfClientMessage } from "@/lib/portal/email";
 import {
   clientRoute,
@@ -28,6 +29,15 @@ export const POST = clientRoute(
 
     await addClientMessage(found.project.id, body);
     await notifyTeamOfClientMessage(found.project, body);
+    await notify(
+      { audience: "admin" },
+      {
+        kind: "client_message",
+        title: `${found.project.name || client.email} wrote on ${found.project.title}`,
+        body,
+        link: `/admin?view=projects&id=${found.project.id}`,
+      },
+    );
     await sendTelegram(
       `💬 <b>${escapeHtml(found.project.name || client.email)}</b> wrote on <b>${escapeHtml(found.project.title)}</b>\n\n${escapeHtml(body.slice(0, 400))}\n\n<a href="${site.url}/admin">Open in admin →</a>`,
     );

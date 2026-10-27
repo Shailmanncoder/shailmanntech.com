@@ -5,6 +5,7 @@ import { isBlockedSender } from "@/lib/admin/blocked";
 import { adminDbConfigured, db } from "@/lib/admin/db";
 import { reportError } from "@/lib/errors";
 import { startSession } from "@/lib/portal/auth";
+import { announceSignup } from "@/lib/portal/signup";
 import { finishGoogleSignIn, GOOGLE_STATE_COOKIE } from "@/lib/portal/google";
 
 export const runtime = "nodejs";
@@ -52,6 +53,8 @@ export async function GET(request: Request) {
     const sql = await db();
     // Same Google account, or an existing account with that (Google-verified)
     // email: link them. Otherwise create a new, already-verified account.
+    const [before] = await sql<{ verified: boolean }[]>`
+      select email_verified_at is not null as verified from clients where email = ${profile.email}`;
     const [client] = await sql<{ id: string }[]>`
       insert into clients (email, name, google_sub, email_verified_at)
       values (${profile.email}, ${profile.name}, ${profile.sub}, now())
@@ -65,6 +68,7 @@ export async function GET(request: Request) {
         email_verified_at = coalesce(clients.email_verified_at, now())
       returning id`;
     await startSession(String(client.id));
+    if (!before?.verified) await announceSignup(profile.email, profile.name, "Google");
     return back();
   } catch (error) {
     await reportError("admin-api", error, { area: "Google sign-in" });

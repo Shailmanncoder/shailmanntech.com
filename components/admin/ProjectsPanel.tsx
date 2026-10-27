@@ -22,17 +22,21 @@ const STATUSES = Object.keys(STATUS_TEXT) as ProjectStatus[];
 type Detail = { project: Project; updates: ProjectUpdate[] };
 
 /** Client projects: post status, progress and messages; each update emails the client. */
-export function ProjectsPanel() {
+export function ProjectsPanel({
+  initialSelected = null,
+}: {
+  /** A project to open straight away, e.g. from a notification. */
+  initialSelected?: string | null;
+}) {
   const toast = useToast();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [filter, setFilter] = useState<"active" | "waiting" | "all">("active");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialSelected);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [form, setForm] = useState({
     body: "",
     status: "" as ProjectStatus | "",
     progress: 0,
-    notify: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -66,7 +70,6 @@ export function ProjectsPanel() {
           body: "",
           status: data.project.status,
           progress: data.project.progress,
-          notify: true,
         });
       })
       .catch((e: Error) => toast({ tone: "error", text: e.message }));
@@ -89,7 +92,6 @@ export function ProjectsPanel() {
             status: form.status !== detail.project.status ? form.status : null,
             progress:
               form.progress !== detail.project.progress ? form.progress : null,
-            notify: form.notify,
           },
         },
       );
@@ -348,17 +350,9 @@ export function ProjectsPanel() {
                   className="w-full resize-y rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-white placeholder:text-white/50 focus:border-brand-cyan/50 focus:outline-none"
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="flex items-center gap-2 text-sm text-white/75">
-                    <input
-                      type="checkbox"
-                      checked={form.notify}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, notify: e.target.checked }))
-                      }
-                      className="size-4 accent-cyan-400"
-                    />
-                    Email the client
-                  </label>
+                  <p className="text-xs text-white/55">
+                    The client is emailed and sees it under their bell.
+                  </p>
                   <Button
                     type="submit"
                     variant="primary"

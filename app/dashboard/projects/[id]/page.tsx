@@ -20,5 +20,11 @@ export default async function ProjectPage({
   if (!client) redirect("/login");
   const found = await getProject((await params).id, client.email);
   if (!found) notFound();
-  return <ProjectView initial={found} />;
+  // Keyed by the latest change, so a refresh shows new updates.
+  return (
+    <ProjectView
+      key={`${found.project.updatedAt}-${found.updates.length}`}
+      initial={found}
+    />
+  );
 }

@@ -2,7 +2,9 @@
 
 import { ArrowLeft, LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { cn } from "@/lib/utils";
 import type { Project, ProjectUpdate } from "@/lib/portal/projects";
 import { ProgressBar, STATUS_TEXT, StatusBadge, When } from "./status";
@@ -13,6 +15,7 @@ export function ProjectView({
 }: {
   initial: { project: Project; updates: ProjectUpdate[] };
 }) {
+  const router = useRouter();
   const [data, setData] = useState(initial);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -47,12 +50,21 @@ export function ProjectView({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-28 pb-20 sm:px-6">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" /> All projects
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" /> All projects
+        </Link>
+        <NotificationBell
+          endpoint="/api/portal/notifications"
+          onOpen={(link) => {
+            router.push(link);
+            router.refresh();
+          }}
+        />
+      </div>
 
       <header className="mt-6">
         <div className="flex flex-wrap items-center gap-3">

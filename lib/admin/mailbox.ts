@@ -2,6 +2,7 @@ import "server-only";
 import { ImapFlow } from "imapflow";
 import { simpleParser, type AddressObject } from "mailparser";
 import { senderAddress } from "@/lib/contact-delivery";
+import { notify } from "@/lib/notifications";
 import { automatedReason } from "./automated";
 import { site } from "@/lib/site";
 import { db } from "./db";
@@ -17,6 +18,8 @@ import { db } from "./db";
 const BATCH_SIZE = 25;
 const MAX_BODY = 100_000;
 const CLASSIFY_BATCH = 150;
+/** Only recent mail rings the bell, so importing old history stays quiet. */
+const NOTIFY_WITHIN_MS = 48 * 3600 * 1000;
 
 export function mailboxConfigured() {
   return Boolean(process.env.IMAP_USER && process.env.IMAP_PASSWORD);
@@ -225,6 +228,23 @@ export async function syncMailbox(MAILBOX = "INBOX"): Promise<SyncResult> {
           imported += rows.length;
           if (rows.length && rows[0].blocked) blocked++;
           else if (rows.length && reason) automated++;
+          else if (
+            rows.length &&
+            !outgoing &&
+            source === "email" &&
+            MAILBOX === "INBOX" &&
+            Date.now() - receivedAt.getTime() < NOTIFY_WITHIN_MS
+          ) {
+            await notify(
+              { audience: "admin" },
+              {
+                kind: "new_email",
+                title: `New email from ${contactName || contactEmail}`,
+                body: parsed.subject || body,
+                link: `/admin?view=all&id=${rows[0].id}`,
+              },
+            );
+          }
           // A website form request was already checked and announced when it
           // was submitted: carry that over instead of checking it again.
           if (rows.length && source === "form" && !outgoing) {

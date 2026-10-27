@@ -9,7 +9,9 @@ import {
   Plus,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/portal/projects";
 import { ProgressBar, StatusBadge, When } from "./status";
@@ -21,12 +23,15 @@ export function Dashboard({
   name,
   email,
   projects,
+  initialTab = "projects",
 }: {
   name: string;
   email: string;
   projects: Project[];
+  initialTab?: "projects" | "emails";
 }) {
-  const [tab, setTab] = useState<"projects" | "emails">("projects");
+  const router = useRouter();
+  const [tab, setTab] = useState<"projects" | "emails">(initialTab);
   const [mail, setMail] = useState<Mail[] | null>(null);
   const [mailError, setMailError] = useState("");
 
@@ -73,6 +78,17 @@ export function Dashboard({
           </p>
         </div>
         <div className="flex gap-2">
+          <NotificationBell
+            endpoint="/api/portal/notifications"
+            onOpen={(link) => {
+              if (link.startsWith("/dashboard?tab=emails")) {
+                setMail(null);
+                setTab("emails");
+              } else {
+                router.push(link);
+              }
+            }}
+          />
           <Link
             href="/dashboard/new"
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-linear-to-r from-brand-blue to-brand-violet px-4 text-sm font-semibold text-white hover:brightness-110"

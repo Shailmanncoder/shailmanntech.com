@@ -54,6 +54,8 @@ describe.skipIf(!database)("client portal", async () => {
   const postUpdate = (
     await import("@/app/api/admin/projects/[id]/updates/route")
   ).POST;
+  const clientBell = await import("@/app/api/portal/notifications/route");
+  const adminBell = await import("@/app/api/admin/notifications/route");
 
   // Emails go to a fake Resend; codes are read back out of them.
   const sent: { to: string[]; subject: string; text: string }[] = [];
@@ -300,6 +302,52 @@ describe.skipIf(!database)("client portal", async () => {
       author: "team",
       body: "Designs are ready.",
     });
+
+    // The same update waits under the client's bell until they read it.
+    const bell = await (await clientBell.GET()).json();
+    expect(bell.unread).toBeGreaterThanOrEqual(1);
+    const update = bell.notifications.find(
+      (n: { kind: string }) => n.kind === "project_update",
+    );
+    expect(update).toMatchObject({ read: false, link: `/dashboard/projects/${project.id}` });
+    expect(update.body).toContain("In progress");
+    const after = await (
+      await call(clientBell.POST, { id: "all" })
+    ).json();
+    expect(after.unread).toBe(0);
+  });
+
+  it("tells the team about sign-ups and client messages, by email and bell", async () => {
+    const [project] = await (await db())<
+      { id: string }[]
+    >`select id from projects where email = 'ada@example.com'`;
+    await call(login, {
+      email: "ada@example.com",
+      password: "a brand new password",
+    });
+    sent.length = 0;
+    await call(postMessage, { body: "Can we add dark mode?" }, params(String(project.id)));
+    expect(sent.some((m) => m.subject.startsWith("Client message on"))).toBe(true);
+
+    jar.clear();
+    jar.set(SESSION_COOKIE, (await createSessionValue()).value);
+    const bell = await (await adminBell.GET()).json();
+    const kinds = bell.notifications.map((n: { kind: string }) => n.kind);
+    expect(kinds).toContain("client_signup");
+    expect(kinds).toContain("client_message");
+    expect(
+      bell.notifications.find((n: { kind: string }) => n.kind === "client_message").link,
+    ).toBe(`/admin?view=projects&id=${project.id}`);
+
+    // A client never sees the team's notifications, and the reverse.
+    jar.clear();
+    await call(login, { email: "ada@example.com", password: "a brand new password" });
+    const theirs = await (await clientBell.GET()).json();
+    expect(
+      theirs.notifications.every((n: { kind: string }) =>
+        ["project_update", "reply", "new_project"].includes(n.kind),
+      ),
+    ).toBe(true);
   });
 
   it("removes a stranger's password when Google confirms the real owner", async () => {

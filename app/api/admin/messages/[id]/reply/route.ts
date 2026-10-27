@@ -1,3 +1,5 @@
+import { notify } from "@/lib/notifications";
+import { site } from "@/lib/site";
 import { validateAttachments } from "@/lib/admin/workspace-validation";
 import { NextResponse } from "next/server";
 import { adminRoute, readJson, text } from "@/lib/admin/api";
@@ -60,6 +62,17 @@ export const POST = adminRoute(
               : result.error,
         },
         { status: result.status },
+      );
+    }
+    if (!result.duplicate) {
+      await notify(
+        { audience: "client", email: message.contactEmail },
+        {
+          kind: "reply",
+          title: `${site.name} replied: ${message.subject}`,
+          body,
+          link: "/dashboard?tab=emails",
+        },
       );
     }
     await logEvent("reply_sent", {

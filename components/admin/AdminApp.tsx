@@ -53,6 +53,7 @@ import { ProjectsPanel } from "./ProjectsPanel";
 import { WorkspacePanel, type Lead } from "./WorkspacePanel";
 import { SystemPanel } from "./SystemPanel";
 import { BlockedListDialog } from "./BlockSender";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import {
   Avatar,
   Badge,
@@ -391,6 +392,35 @@ function AdminShell({ setup }: { setup: Setup }) {
     [view],
   );
 
+  // Opens what a notification points at: "/admin?view=projects&id=12".
+  const [projectToOpen, setProjectToOpen] = useState<string | null>(null);
+  const openNotification = useCallback(
+    (link: string) => {
+      const params = new URL(link, window.location.origin).searchParams;
+      const target = params.get("view") ?? "all";
+      const id = params.get("id");
+      if (target === "projects") {
+        setProjectToOpen(id);
+        setView("projects");
+        return;
+      }
+      const folderKey = FOLDERS.some((f) => f.key === target)
+        ? (target as InboxFilter)
+        : "all";
+      listGeneration.current++;
+      setHasMore(false);
+      setSearch("");
+      if (folderKey !== view) {
+        setMessages(null);
+        setView(folderKey);
+      } else {
+        loadMessages();
+      }
+      setSelected(id);
+    },
+    [view, loadMessages],
+  );
+
   const openMessage = useCallback(
     (id: string) => {
       if (isPage) {
@@ -482,13 +512,20 @@ function AdminShell({ setup }: { setup: Setup }) {
       />
 
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-white/[0.06] bg-canvas-raised/60 px-3 py-5 backdrop-blur lg:flex">
+      <aside className="sticky top-0 z-30 hidden h-svh w-64 shrink-0 flex-col border-r border-white/[0.06] bg-canvas-raised/60 px-3 py-5 backdrop-blur lg:flex">
         <div className="flex items-center gap-2.5 px-3">
           <LogoMark className="size-8" />
-          <div className="leading-tight">
+          <div className="min-w-0 flex-1 leading-tight">
             <p className="text-sm font-semibold text-white">{site.name}</p>
             <p className="text-[0.6875rem] text-white/50">Admin</p>
           </div>
+          {setup.database ? (
+            <NotificationBell
+              endpoint="/api/admin/notifications"
+              onOpen={openNotification}
+              align="left"
+            />
+          ) : null}
         </div>
 
         <nav className="mt-8 flex flex-col gap-0.5" aria-label="Admin">
@@ -611,6 +648,12 @@ function AdminShell({ setup }: { setup: Setup }) {
           <span className="ml-auto truncate text-xs text-white/50">
             {syncLabel}
           </span>
+          {setup.database ? (
+            <NotificationBell
+              endpoint="/api/admin/notifications"
+              onOpen={openNotification}
+            />
+          ) : null}
           <IconButton
             label="Sync mailbox"
             onClick={() => runSync()}
@@ -660,7 +703,7 @@ function AdminShell({ setup }: { setup: Setup }) {
         ) : null}
 
         {view === "projects" ? (
-          <ProjectsPanel />
+          <ProjectsPanel key={projectToOpen ?? "list"} initialSelected={projectToOpen} />
         ) : view === "workspace" ? (
           <WorkspacePanel />
         ) : view === "system" ? (

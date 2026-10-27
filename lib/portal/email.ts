@@ -118,3 +118,21 @@ export async function notifyTeamOfClientMessage(
     });
   }
 }
+
+/** Tells the team a new client confirmed their account. */
+export async function notifyTeamOfSignup(client: { email: string; name: string }, via: string) {
+  try {
+    await send({
+      to: [inboxAddress()],
+      reply_to: client.email,
+      subject: `New client account: ${client.name || client.email}`,
+      text: [
+        `${client.name || "Someone"} (${client.email}) created a client portal account with ${via}.`,
+        "",
+        `See their projects in the admin: ${site.url}/admin`,
+      ].join("\n"),
+    });
+  } catch (error) {
+    await reportError("contact-delivery", error, { stage: "sign-up notification" });
+  }
+}

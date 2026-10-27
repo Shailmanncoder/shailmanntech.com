@@ -11,7 +11,11 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const client = await currentClient();
   if (!client) redirect("/login");
   return (
@@ -19,6 +23,7 @@ export default async function DashboardPage() {
       name={client.name}
       email={client.email}
       projects={await projectsFor(client.email)}
+      initialTab={(await searchParams).tab === "emails" ? "emails" : "projects"}
     />
   );
 }

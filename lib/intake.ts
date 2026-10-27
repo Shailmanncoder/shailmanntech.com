@@ -10,6 +10,7 @@ import {
   submissionKey,
 } from "@/lib/contact-submissions";
 import { reportError } from "@/lib/errors";
+import { notify } from "@/lib/notifications";
 import { createProject } from "@/lib/portal/projects";
 
 /**
@@ -34,9 +35,14 @@ async function later(task: () => Promise<unknown>) {
   }
 }
 
+function projectTitle(payload: ContactPayload, title?: string) {
+  return title?.trim() || `Project request — ${payload.service}`;
+}
+
+/** `title` is given for requests from the client portal, not the contact form. */
 export async function intake(
   payload: ContactPayload,
-  title?: string,
+  titleInput?: string,
 ): Promise<IntakeResult> {
   // Saved before sending. A repeat of a submission that already went through
   // (a double click, a refresh, a retry) is acknowledged without resending.
@@ -64,7 +70,7 @@ export async function intake(
       const project = await createProject({
         email: payload.email,
         name: payload.name,
-        title: title?.trim() || `Project request — ${payload.service}`,
+        title: projectTitle(payload, titleInput),
         service: payload.service,
         description: payload.message,
         budget: payload.budget,
@@ -77,6 +83,30 @@ export async function intake(
         stage: "creating the project",
       });
     }
+  }
+
+  // The emails went out above (to the inbox, and the confirmation to the
+  // client); these are the matching bell notifications.
+  const title = projectTitle(payload, titleInput);
+  await notify(
+    { audience: "admin" },
+    {
+      kind: titleInput === undefined ? "form_request" : "new_project",
+      title: `New project request from ${payload.name}`,
+      body: `${title} — ${payload.message}`,
+      link: projectId ? `/admin?view=projects&id=${projectId}` : "/admin?view=form",
+    },
+  );
+  if (projectId) {
+    await notify(
+      { audience: "client", email: payload.email },
+      {
+        kind: "new_project",
+        title: "We received your project request",
+        body: `${title}. We'll reply within one business day.`,
+        link: `/dashboard/projects/${projectId}`,
+      },
+    );
   }
 
   await later(() => checkFormLead(payload, recorded.id));
